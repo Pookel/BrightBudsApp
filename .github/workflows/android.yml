@@ -1,0 +1,62 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "main", "brightbuds-main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for Gradle wrapper
+        run: chmod +x gradlew
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          ndk: 25.2.9519653
+          cache: gradle
+
+      # Securely restore google-services.json from GitHub secret
+      - name: Decode google-services.json from secret
+        if: ${{ secrets.GOOGLE_SERVICES_JSON != '' }}
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 --decode > app/google-services.json
+          echo "Firebase config restored successfully."
+
+      # Fallback: create placeholder if secret not found
+      - name: Create placeholder google-services.json
+        if: ${{ secrets.GOOGLE_SERVICES_JSON == '' }}
+        run: |
+          mkdir -p app
+          echo '{ "project_info": { "project_id": "brightbuds-placeholder" } }' > app/google-services.json
+          echo "Using placeholder google-services.json (Firebase features disabled)."
+
+      # ⚙Build Debug APK (skip lint and tests for faster CI)
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug -x lint -x test
+
+      # Upload generated APK as an artifact so teammates can download it
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BrightBuds-Debug-APK
+          path: app/build/outputs/apk/debug/*.apk
