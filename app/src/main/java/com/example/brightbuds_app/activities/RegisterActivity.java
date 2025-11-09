@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Patterns;
 import android.widget.Button;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -14,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.brightbuds_app.R;
 import com.example.brightbuds_app.interfaces.DataCallbacks;
 import com.example.brightbuds_app.services.AuthServices;
+import com.example.brightbuds_app.utils.EncryptionUtil;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -24,12 +24,12 @@ import java.util.Map;
 
 /**
  * Handles user registration with FirebaseAuth and Firestore.
+ * Encrypts sensitive parent info (name, email) before saving.
  * Includes email verification enforcement.
  */
 public class RegisterActivity extends AppCompatActivity {
 
     private TextInputEditText fullNameEditText, emailEditText, passwordEditText, confirmPasswordEditText;
-    private RadioGroup roleGroup;
     private Button registerButton;
     private TextView loginRedirect;
 
@@ -80,13 +80,12 @@ public class RegisterActivity extends AppCompatActivity {
                     return;
                 }
 
-                // Send verification email
+                // Send email verification
                 user.sendEmailVerification()
-                        .addOnSuccessListener(aVoid -> {
-                            Toast.makeText(RegisterActivity.this,
-                                    "📩 Verification link sent! Please check your email.",
-                                    Toast.LENGTH_LONG).show();
-                        })
+                        .addOnSuccessListener(aVoid ->
+                                Toast.makeText(RegisterActivity.this,
+                                        "📩 Verification link sent! Please check your email.",
+                                        Toast.LENGTH_LONG).show())
                         .addOnFailureListener(e ->
                                 Toast.makeText(RegisterActivity.this,
                                         "Failed to send verification email: " + e.getMessage(),
@@ -94,11 +93,16 @@ public class RegisterActivity extends AppCompatActivity {
 
                 String uid = user.getUid();
 
-                // Save minimal user info
+                // ENCRYPT sensitive parent info
+                String encryptedFullName = EncryptionUtil.encrypt(fullName);
+                String encryptedEmail = EncryptionUtil.encrypt(email);
+
+                // Prepare Firestore data with encrypted fields
                 Map<String, Object> data = new HashMap<>();
                 data.put("uid", uid);
-                data.put("fullName", fullName);
-                data.put("email", email);
+                data.put("fullName", encryptedFullName);
+                data.put("name", encryptedFullName);
+                data.put("email", encryptedEmail);
                 data.put("type", userType);
                 data.put("createdAt", System.currentTimeMillis());
                 data.put("emailVerified", false);
@@ -106,7 +110,7 @@ public class RegisterActivity extends AppCompatActivity {
                 db.collection("users").document(uid)
                         .set(data)
                         .addOnSuccessListener(unused -> {
-                            firebaseAuth.signOut(); // Force verification before login
+                            firebaseAuth.signOut(); // Require verification before login
                             registerButton.setEnabled(true);
                             registerButton.setText("Create Account");
 

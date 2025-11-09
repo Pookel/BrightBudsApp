@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -29,6 +30,7 @@ import com.example.brightbuds_app.models.Progress;
 import com.example.brightbuds_app.services.AuthServices;
 import com.example.brightbuds_app.services.ChildProfileService;
 import com.example.brightbuds_app.services.ProgressService;
+import com.example.brightbuds_app.utils.EncryptionUtil;
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
@@ -41,6 +43,8 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,6 +64,7 @@ public class ParentDashboardActivity extends AppCompatActivity {
     private AuthServices authService;
     private ChildProfileService childService;
     private ProgressService progressService;
+    private FirebaseFirestore db;
 
     // Safety flag to prevent duplicate loading
     private boolean isLoadingChildren = false;
@@ -85,12 +90,13 @@ public class ParentDashboardActivity extends AppCompatActivity {
         authService = new AuthServices(this);
         childService = new ChildProfileService();
         progressService = new ProgressService(this);
+        db = FirebaseFirestore.getInstance();
 
         txtWelcome = findViewById(R.id.txtWelcomeParent);
         childrenContainer = findViewById(R.id.childrenContainer);
 
-        String parentName = currentUser.getDisplayName() != null ? currentUser.getDisplayName() : "Parent";
-        txtWelcome.setText("Welcome back " + parentName + "!");
+        // Load and decrypt parent name for welcome message
+        loadParentNameForWelcome();
 
         // Manage Family button
         MaterialButton btnManageFamily = findViewById(R.id.btnManageFamily);
@@ -102,6 +108,41 @@ public class ParentDashboardActivity extends AppCompatActivity {
         bottomNav.setOnItemSelectedListener(this::onBottomNavSelected);
 
         Log.d(TAG, "✅ ParentDashboard loaded for parent: " + parentId);
+    }
+
+    /** Load and decrypt parent name for welcome message */
+    private void loadParentNameForWelcome() {
+        db.collection("users").document(parentId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        // 🔓 Decrypt parent name
+                        String encryptedName = documentSnapshot.getString("name");
+                        String encryptedFullName = documentSnapshot.getString("fullName");
+
+                        String decryptedName = EncryptionUtil.decrypt(encryptedName);
+                        String decryptedFullName = EncryptionUtil.decrypt(encryptedFullName);
+
+                        // Use decrypted name for welcome message
+                        String displayName = !TextUtils.isEmpty(decryptedName) ? decryptedName :
+                                !TextUtils.isEmpty(decryptedFullName) ? decryptedFullName :
+                                        "Parent";
+
+                        txtWelcome.setText("Welcome back " + displayName + "!");
+
+                        Log.d(TAG, "✅ Parent name decrypted: " + displayName);
+                    } else {
+                        // Fallback to Firebase Auth display name
+                        String parentName = FirebaseAuth.getInstance().getCurrentUser().getDisplayName();
+                        txtWelcome.setText("Welcome back " + (parentName != null ? parentName : "Parent") + "!");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Failed to load parent name", e);
+                    // Fallback to Firebase Auth display name
+                    String parentName = FirebaseAuth.getInstance().getCurrentUser().getDisplayName();
+                    txtWelcome.setText("Welcome back " + (parentName != null ? parentName : "Parent") + "!");
+                });
     }
 
     // Handle bottom navigation clicks
@@ -272,7 +313,7 @@ public class ParentDashboardActivity extends AppCompatActivity {
             index++;
         }
 
-        BarDataSet dataSet = new BarDataSet(entries, "Module Plays / Scores");
+        BarDataSet dataSet = new BarDataSet(entries, "");
         int[] colors = new int[entries.size()];
         for (int i = 0; i < entries.size(); i++) {
             String id = order[i];
@@ -308,7 +349,7 @@ public class ParentDashboardActivity extends AppCompatActivity {
 
         chart.getAxisRight().setEnabled(false);
         chart.getDescription().setEnabled(false);
-        chart.getLegend().setEnabled(true);
+        chart.getLegend().setEnabled(false);
         chart.setExtraOffsets(10f, 10f, 10f, 30f);
         chart.setFitBars(true);
         chart.animateY(1000);
@@ -384,10 +425,14 @@ public class ParentDashboardActivity extends AppCompatActivity {
             }
         }
 
-        // Compute % progress
+        // Compute and cap progress
         int percentage = (int) Math.round((completedModules / (double) totalModules) * 100);
+        percentage = Math.min(percentage, 100); // cap at 100%
 
-        // Update progress UI
+        // Compute and cap stars (max 5)
+        int starsEarnedCapped = Math.min(starsEarned, 5);
+
+        // Update progress UI cleanly
         if (completedModules == 0) {
             progressText.setText("New to BrightBuds!");
             progressText.setTextColor(Color.parseColor("#666666"));
@@ -397,20 +442,20 @@ public class ParentDashboardActivity extends AppCompatActivity {
             progressBar.setProgress(percentage);
             progressBar.setVisibility(View.VISIBLE);
 
-            // Color-code progress text
+            // Color-code progress
             if (percentage >= 80) {
                 progressText.setTextColor(Color.parseColor("#4CAF50")); // green
             } else if (percentage >= 50) {
-                progressText.setTextColor(Color.parseColor("#FFC107")); // orange
+                progressText.setTextColor(Color.parseColor("#FFC107")); // amber
             } else {
                 progressText.setTextColor(Color.parseColor("#F44336")); // red
             }
         }
 
-        // Add star achievements
+        // Stars display (always capped at 5)
         achievementsLayout.removeAllViews();
-        if (starsEarned > 0) {
-            for (int i = 0; i < starsEarned; i++) {
+        if (starsEarnedCapped > 0) {
+            for (int i = 0; i < starsEarnedCapped; i++) {
                 ImageView star = new ImageView(this);
                 star.setImageResource(R.drawable.ic_star_yellow);
                 int size = (int) getResources().getDimension(R.dimen.star_icon_size);
@@ -448,6 +493,7 @@ public class ParentDashboardActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         Log.d(TAG, "🔄 Refreshing dashboard data");
+        progressService.autoSyncOfflineProgress();
         loadChildrenAndProgress(); // Refresh dashboard
     }
 }

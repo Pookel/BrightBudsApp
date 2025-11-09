@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
 import com.example.brightbuds_app.R;
+import com.example.brightbuds_app.utils.EncryptionUtil;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -70,7 +71,6 @@ public class ParentProfileActivity extends AppCompatActivity {
         setupClickListeners();
     }
 
-    /** Initialize UI components */
     private void initializeViews() {
         txtUserName = findViewById(R.id.txtUserName);
         txtUserEmail = findViewById(R.id.txtUserEmail);
@@ -88,199 +88,186 @@ public class ParentProfileActivity extends AppCompatActivity {
         progressDialog.setCancelable(false);
     }
 
-    /** Load user data from Firebase Auth & Firestore */
+    /** Load decrypted user data */
     private void loadUserData() {
-        txtUserName.setText(currentUser.getDisplayName() != null ? currentUser.getDisplayName() : "Parent");
-        txtUserEmail.setText(currentUser.getEmail());
-
         db.collection("users").document(currentUser.getUid())
                 .get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        String userType = documentSnapshot.getString("type");
-                        txtUserRole.setText(userType != null && userType.equalsIgnoreCase("admin") ? "Administrator" : "Parent");
+                .addOnSuccessListener(document -> {
+                    if (document.exists()) {
+                        String encryptedName = document.getString("fullName");
+                        String decryptedName = EncryptionUtil.decrypt(encryptedName);
+                        String displayName = (decryptedName != null && !decryptedName.isEmpty())
+                                ? decryptedName
+                                : currentUser.getDisplayName();
 
-                        String avatarUrl = documentSnapshot.getString("avatarUrl");
+                        String encryptedEmail = document.getString("email");
+                        String decryptedEmail = EncryptionUtil.decrypt(encryptedEmail);
+                        String email = (decryptedEmail != null && !decryptedEmail.isEmpty())
+                                ? decryptedEmail
+                                : currentUser.getEmail();
+
+                        txtUserName.setText(displayName != null ? displayName : "Parent");
+                        txtUserEmail.setText(email != null ? email : "—");
+
+                        String userType = document.getString("type");
+                        txtUserRole.setText(userType != null && userType.equalsIgnoreCase("admin")
+                                ? "Administrator" : "Parent");
+
+                        String avatarUrl = document.getString("avatarUrl");
                         if (avatarUrl != null && !avatarUrl.isEmpty()) {
                             Glide.with(this)
                                     .load(avatarUrl)
                                     .placeholder(R.drawable.ic_child_placeholder)
-                                    .error(R.drawable.ic_child_placeholder)
                                     .circleCrop()
                                     .into(imgUserAvatar);
                         }
                     } else {
+                        txtUserName.setText("Parent");
                         txtUserRole.setText("Parent");
+                        txtUserEmail.setText(currentUser.getEmail());
                     }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "❌ Failed to load user data", e);
+                    txtUserName.setText("Parent");
+                    txtUserEmail.setText(currentUser.getEmail());
                     txtUserRole.setText("Parent");
                 });
 
-        // Also check for Auth profile image
         if (currentUser.getPhotoUrl() != null) {
             Glide.with(this)
                     .load(currentUser.getPhotoUrl())
                     .placeholder(R.drawable.ic_child_placeholder)
-                    .error(R.drawable.ic_child_placeholder)
                     .circleCrop()
                     .into(imgUserAvatar);
         }
     }
 
-    /** Setup button listeners */
     private void setupClickListeners() {
         btnEditProfile.setOnClickListener(v -> showEditProfileDialog());
         btnChangePassword.setOnClickListener(v -> showChangePasswordDialog());
-
-        // Terms and Conditions button
-        btnTermsConditions.setOnClickListener(v -> {
-            Intent intent = new Intent(this, TermsConditionsActivity.class);
-            startActivity(intent);
-        });
-
+        btnTermsConditions.setOnClickListener(v ->
+                startActivity(new Intent(this, TermsConditionsActivity.class)));
         btnLogout.setOnClickListener(v -> {
             auth.signOut();
-            Intent intent = new Intent(this, LandingActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
+            Intent i = new Intent(this, LandingActivity.class);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(i);
             finish();
         });
-
         imgUserAvatar.setOnClickListener(v -> changeProfilePicture());
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
     }
 
-    /** Edit profile details */
-    private void showEditProfileDialog() {
-        MaterialAlertDialogBuilder dialogBuilder = new MaterialAlertDialogBuilder(this)
-                .setTitle("Edit Profile");
-
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_edit_profile, null);
-        TextInputEditText etDisplayName = dialogView.findViewById(R.id.etDisplayName);
-        TextInputEditText etEmail = dialogView.findViewById(R.id.etEmail);
-
-        etDisplayName.setText(currentUser.getDisplayName());
-        etEmail.setText(currentUser.getEmail());
-        dialogBuilder.setView(dialogView);
-
-        dialogBuilder.setPositiveButton("Save", (dialog, which) -> {
-            String newDisplayName = etDisplayName.getText().toString().trim();
-            String newEmail = etEmail.getText().toString().trim();
-
-            if (TextUtils.isEmpty(newDisplayName) || TextUtils.isEmpty(newEmail)) {
-                Toast.makeText(this, "Please complete all fields", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            updateProfile(newDisplayName, newEmail);
-        });
-
-        dialogBuilder.setNegativeButton("Cancel", null);
-        dialogBuilder.show();
-    }
-
-    /** Update Firebase profile */
-    private void updateProfile(String displayName, String email) {
+    /** Save encrypted updates */
+    private void updateProfile(String name, String email) {
         progressDialog.setMessage("Updating profile...");
         progressDialog.show();
 
-        UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
-                .setDisplayName(displayName)
-                .build();
+        String encName = EncryptionUtil.encrypt(name);
+        String encEmail = EncryptionUtil.encrypt(email);
 
-        currentUser.updateProfile(profileUpdates)
+        UserProfileChangeRequest updates = new UserProfileChangeRequest.Builder()
+                .setDisplayName(name).build();
+
+        currentUser.updateProfile(updates)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        if (!email.equals(currentUser.getEmail())) {
-                            currentUser.updateEmail(email)
-                                    .addOnCompleteListener(emailTask -> {
-                                        progressDialog.dismiss();
-                                        if (emailTask.isSuccessful()) {
-                                            updateFirestoreUserData(displayName, email);
-                                            loadUserData();
-                                            Toast.makeText(this, "Profile updated successfully!", Toast.LENGTH_SHORT).show();
-                                        } else {
-                                            Toast.makeText(this, "Email update failed", Toast.LENGTH_SHORT).show();
-                                        }
-                                    });
-                        } else {
-                            progressDialog.dismiss();
-                            updateFirestoreUserData(displayName, email);
-                            loadUserData();
-                            Toast.makeText(this, "Profile updated successfully!", Toast.LENGTH_SHORT).show();
-                        }
+                        currentUser.updateEmail(email)
+                                .addOnCompleteListener(eTask -> {
+                                    Map<String, Object> updateData = new HashMap<>();
+                                    updateData.put("fullName", encName);
+                                    updateData.put("email", encEmail);
+                                    updateData.put("name", encName);
+
+                                    db.collection("users").document(currentUser.getUid())
+                                            .update(updateData)
+                                            .addOnSuccessListener(unused -> {
+                                                progressDialog.dismiss();
+                                                loadUserData();
+                                                Toast.makeText(this, "Profile updated!", Toast.LENGTH_SHORT).show();
+                                            })
+                                            .addOnFailureListener(e -> {
+                                                progressDialog.dismiss();
+                                                Toast.makeText(this, "Firestore update failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                            });
+                                });
                     } else {
                         progressDialog.dismiss();
-                        Toast.makeText(this, "Failed to update: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
     }
 
-    /** Update user Firestore document */
-    private void updateFirestoreUserData(String displayName, String email) {
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("name", displayName);
-        updates.put("email", email);
+    private void showEditProfileDialog() {
+        MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle("Edit Profile");
+        View v = getLayoutInflater().inflate(R.layout.dialog_edit_profile, null);
+        TextInputEditText etName = v.findViewById(R.id.etDisplayName);
+        TextInputEditText etEmail = v.findViewById(R.id.etEmail);
 
-        db.collection("users").document(currentUser.getUid()).update(updates)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "✅ Firestore user data updated"))
-                .addOnFailureListener(e -> Log.e(TAG, "❌ Firestore update failed", e));
+        etName.setText(txtUserName.getText());
+        etEmail.setText(txtUserEmail.getText());
+        dialog.setView(v);
+
+        dialog.setPositiveButton("Save", (d, w) -> {
+            String newName = etName.getText().toString().trim();
+            String newEmail = etEmail.getText().toString().trim();
+            if (TextUtils.isEmpty(newName) || TextUtils.isEmpty(newEmail)) {
+                Toast.makeText(this, "All fields required", Toast.LENGTH_SHORT).show();
+            } else {
+                updateProfile(newName, newEmail);
+            }
+        });
+        dialog.setNegativeButton("Cancel", null);
+        dialog.show();
     }
 
-    /** Change password securely */
     private void showChangePasswordDialog() {
-        MaterialAlertDialogBuilder dialogBuilder = new MaterialAlertDialogBuilder(this)
+        MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("Change Password");
+        View v = getLayoutInflater().inflate(R.layout.dialog_change_password, null);
+        TextInputEditText current = v.findViewById(R.id.etCurrentPassword);
+        TextInputEditText newPass = v.findViewById(R.id.etNewPassword);
+        TextInputEditText confirm = v.findViewById(R.id.etConfirmPassword);
+        dialog.setView(v);
 
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_change_password, null);
-        TextInputEditText etCurrentPassword = dialogView.findViewById(R.id.etCurrentPassword);
-        TextInputEditText etNewPassword = dialogView.findViewById(R.id.etNewPassword);
-        TextInputEditText etConfirmPassword = dialogView.findViewById(R.id.etConfirmPassword);
+        dialog.setPositiveButton("Change", (d, w) -> {
+            String cur = current.getText().toString().trim();
+            String np = newPass.getText().toString().trim();
+            String cf = confirm.getText().toString().trim();
 
-        dialogBuilder.setView(dialogView);
-        dialogBuilder.setPositiveButton("Change", (dialog, which) -> {
-            String current = etCurrentPassword.getText().toString().trim();
-            String newPass = etNewPassword.getText().toString().trim();
-            String confirm = etConfirmPassword.getText().toString().trim();
-
-            if (TextUtils.isEmpty(current) || TextUtils.isEmpty(newPass) || TextUtils.isEmpty(confirm)) {
-                Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
+            if (TextUtils.isEmpty(cur) || TextUtils.isEmpty(np) || TextUtils.isEmpty(cf)) {
+                Toast.makeText(this, "Please complete all fields", Toast.LENGTH_SHORT).show();
                 return;
             }
-
-            if (!newPass.equals(confirm)) {
+            if (!np.equals(cf)) {
                 Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show();
                 return;
             }
-
-            if (newPass.length() < 6) {
+            if (np.length() < 6) {
                 Toast.makeText(this, "Password too short", Toast.LENGTH_SHORT).show();
                 return;
             }
-
-            changePassword(current, newPass);
+            changePassword(cur, np);
         });
-
-        dialogBuilder.setNegativeButton("Cancel", null);
-        dialogBuilder.show();
+        dialog.setNegativeButton("Cancel", null);
+        dialog.show();
     }
 
-    /** Update password */
     private void changePassword(String currentPassword, String newPassword) {
         progressDialog.setMessage("Changing password...");
         progressDialog.show();
 
-        AuthCredential credential = EmailAuthProvider.getCredential(currentUser.getEmail(), currentPassword);
-        currentUser.reauthenticate(credential)
+        AuthCredential cred = EmailAuthProvider.getCredential(currentUser.getEmail(), currentPassword);
+        currentUser.reauthenticate(cred)
                 .addOnSuccessListener(aVoid -> currentUser.updatePassword(newPassword)
                         .addOnCompleteListener(task -> {
                             progressDialog.dismiss();
-                            if (task.isSuccessful()) {
-                                Toast.makeText(this, "Password changed successfully!", Toast.LENGTH_SHORT).show();
-                            } else {
-                                Toast.makeText(this, "Failed to change password", Toast.LENGTH_SHORT).show();
-                            }
+                            if (task.isSuccessful())
+                                Toast.makeText(this, "Password changed successfully", Toast.LENGTH_SHORT).show();
+                            else
+                                Toast.makeText(this, "Password update failed", Toast.LENGTH_SHORT).show();
                         }))
                 .addOnFailureListener(e -> {
                     progressDialog.dismiss();
@@ -288,45 +275,31 @@ public class ParentProfileActivity extends AppCompatActivity {
                 });
     }
 
-    /** Upload a new profile picture */
     private void changeProfilePicture() {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("image/*");
-        startActivityForResult(Intent.createChooser(intent, "Select Profile Picture"), PICK_IMAGE_REQUEST);
+        Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+        i.setType("image/*");
+        startActivityForResult(Intent.createChooser(i, "Select Profile Picture"), PICK_IMAGE_REQUEST);
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
+    protected void onActivityResult(int req, int res, @Nullable Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req == PICK_IMAGE_REQUEST && res == RESULT_OK && data != null && data.getData() != null) {
             uploadProfilePicture(data.getData());
         }
     }
 
-    /** Upload profile picture to Firebase Storage */
-    private void uploadProfilePicture(Uri imageUri) {
-        progressDialog.setMessage("Uploading profile picture...");
+    private void uploadProfilePicture(Uri uri) {
+        progressDialog.setMessage("Uploading...");
         progressDialog.show();
-
-        StorageReference ref = storage.getReference()
-                .child("profile_pictures/" + currentUser.getUid() + "_" + UUID.randomUUID());
-
-        ref.putFile(imageUri)
-                .addOnSuccessListener(task -> ref.getDownloadUrl().addOnSuccessListener(uri -> {
-                    currentUser.updateProfile(new UserProfileChangeRequest.Builder()
-                                    .setPhotoUri(uri)
-                                    .build())
-                            .addOnSuccessListener(aVoid -> {
-                                db.collection("users").document(currentUser.getUid())
-                                        .update("avatarUrl", uri.toString());
-                                Glide.with(this)
-                                        .load(uri)
-                                        .placeholder(R.drawable.ic_child_placeholder)
-                                        .circleCrop()
-                                        .into(imgUserAvatar);
-                                progressDialog.dismiss();
-                                Toast.makeText(this, "Profile picture updated!", Toast.LENGTH_SHORT).show();
-                            });
+        StorageReference ref = storage.getReference().child("profile_pictures/" + currentUser.getUid() + "_" + UUID.randomUUID());
+        ref.putFile(uri)
+                .addOnSuccessListener(t -> ref.getDownloadUrl().addOnSuccessListener(downloadUri -> {
+                    currentUser.updateProfile(new UserProfileChangeRequest.Builder().setPhotoUri(downloadUri).build());
+                    db.collection("users").document(currentUser.getUid()).update("avatarUrl", downloadUri.toString());
+                    Glide.with(this).load(downloadUri).circleCrop().into(imgUserAvatar);
+                    progressDialog.dismiss();
+                    Toast.makeText(this, "Profile picture updated!", Toast.LENGTH_SHORT).show();
                 }))
                 .addOnFailureListener(e -> {
                     progressDialog.dismiss();
@@ -337,8 +310,6 @@ public class ParentProfileActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (progressDialog != null && progressDialog.isShowing()) {
-            progressDialog.dismiss();
-        }
+        if (progressDialog.isShowing()) progressDialog.dismiss();
     }
 }

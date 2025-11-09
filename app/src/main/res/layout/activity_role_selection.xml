@@ -164,15 +164,4 @@
         </androidx.cardview.widget.CardView>
     </LinearLayout>
 
-    <!-- Info text -->
-    <TextView
-        android:layout_width="280dp"
-        android:layout_height="wrap_content"
-        android:text="You can switch profiles anytime"
-        android:textColor="@color/text_secondary"
-        android:textSize="14sp"
-        android:gravity="center"
-        android:layout_marginTop="20dp"
-        android:fontFamily="sans-serif" />
-
 </LinearLayout>

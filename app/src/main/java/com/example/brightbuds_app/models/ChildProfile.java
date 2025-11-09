@@ -4,7 +4,16 @@ import com.example.brightbuds_app.utils.EncryptionUtil;
 import java.util.Date;
 import java.util.Map;
 
+/**
+ * ChildProfile:
+ * Represents each child account linked to a parent profile.
+ * Supports encryption/decryption for sensitive data and includes
+ * progress and star calculation for 7-module curriculum.
+ */
 public class ChildProfile {
+
+    private static final int TOTAL_MODULES = 7; // Used for progress and stars calculation
+
     private String childId;
     private String parentId;
     private String name;
@@ -13,8 +22,9 @@ public class ChildProfile {
     private int age;
     private String learningLevel;
     private boolean active;
-    private int progress;
-    private int stars;
+    private int progress;           // Computed progress percentage (0–100)
+    private int stars;              // Computed star rating (0–5)
+    private int completedModules;   // Number of completed modules (0–7)
     private Date createdAt;
 
     // Default constructor
@@ -22,20 +32,19 @@ public class ChildProfile {
         this.active = true;
         this.progress = 0;
         this.stars = 0;
+        this.completedModules = 0;
         this.createdAt = new Date();
     }
 
-    // Parameterized constructor - ACTUALLY SETS THE VALUES NOW
+    // Parameterized constructor
     public ChildProfile(String parentId, String name, int age, String gender, String learningLevel) {
-        this(); // Call default constructor to set defaults
-
-        // Actually assign the parameter values
+        this(); // call default constructor
         this.parentId = parentId;
         this.name = name;
         this.age = age;
         this.gender = gender;
         this.learningLevel = learningLevel;
-        this.displayName = name; // Set displayName to name by default
+        this.displayName = name;
     }
 
     // Encryption helpers
@@ -63,7 +72,7 @@ public class ChildProfile {
         displayName = encrypted != null ? EncryptionUtil.decrypt(encrypted) : "";
     }
 
-    // Standard getters/setters
+    // Standard Getters/Setters
     public String getChildId() { return childId; }
     public void setChildId(String childId) { this.childId = childId; }
 
@@ -94,10 +103,34 @@ public class ChildProfile {
     public int getStars() { return stars; }
     public void setStars(int stars) { this.stars = stars; }
 
+    public int getCompletedModules() { return completedModules; }
+    public void setCompletedModules(int completedModules) {
+        this.completedModules = Math.max(0, Math.min(completedModules, TOTAL_MODULES));
+        recalculateProgressAndStars();
+    }
+
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
 
     public Map<Object, Object> getAvatarUrl() {
         return java.util.Collections.emptyMap();
+    }
+
+    // Derived values
+    private void recalculateProgressAndStars() {
+        this.progress = (int) Math.round((completedModules / (double) TOTAL_MODULES) * 100);
+        this.stars = (int) Math.round((completedModules / (double) TOTAL_MODULES) * 5);
+        if (progress > 100) progress = 100;
+        if (stars > 5) stars = 5;
+    }
+
+    @Override
+    public String toString() {
+        return "ChildProfile{" +
+                "name='" + displayName + '\'' +
+                ", modules=" + completedModules +
+                ", progress=" + progress +
+                "%, stars=" + stars +
+                '}';
     }
 }

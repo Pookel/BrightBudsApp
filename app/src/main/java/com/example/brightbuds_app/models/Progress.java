@@ -3,6 +3,11 @@ package com.example.brightbuds_app.models;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.PropertyName;
 
+/**
+ * Progress:
+ * Represents each child's activity and learning progress record in Firestore.
+ * Includes helper logic for determining completion and module name mapping.
+ */
 public class Progress {
 
     private String progressId;
@@ -14,7 +19,7 @@ public class Progress {
     private long timeSpent;
     private long timestamp;
 
-    // Firestore fields for analytics and chart
+    // Firestore fields for analytics and charting
     private int plays;
     private String type;
     private boolean completionStatus;
@@ -22,9 +27,10 @@ public class Progress {
     // Flexible lastUpdated field — handles both Timestamp & Long
     private Object lastUpdated;
 
+    // Default constructor (Firestore)
     public Progress() {}
 
-    // Standard Firestore mappings
+    // --- Firestore Mappings ---
     @PropertyName("progressId")
     public String getProgressId() { return progressId; }
     @PropertyName("progressId")
@@ -65,7 +71,6 @@ public class Progress {
     @PropertyName("timestamp")
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 
-    // Firestore mappings for analytics fields
     @PropertyName("plays")
     public int getPlays() { return plays; }
     @PropertyName("plays")
@@ -81,13 +86,12 @@ public class Progress {
     @PropertyName("completionStatus")
     public void setCompletionStatus(boolean completionStatus) { this.completionStatus = completionStatus; }
 
-    // Safe lastUpdated handling (prevents crash)
     @PropertyName("lastUpdated")
     public Object getLastUpdated() { return lastUpdated; }
     @PropertyName("lastUpdated")
     public void setLastUpdated(Object lastUpdated) { this.lastUpdated = lastUpdated; }
 
-    // Utility: safely convert old Long → Timestamp
+    // Timestamp utility
     public Timestamp getLastUpdatedTimestamp() {
         if (lastUpdated instanceof Timestamp) {
             return (Timestamp) lastUpdated;
@@ -97,20 +101,54 @@ public class Progress {
         return null;
     }
 
+    // Completion helper
+    /**
+     * Determines whether this progress record represents a completed module.
+     * A module is considered completed if:
+     *  - completionStatus == true, or
+     *  - score >= 70, or
+     *  - status equals "completed"
+     */
+    public boolean isModuleCompleted() {
+        if (completionStatus) return true;
+        if (score >= 70) return true;
+        return status != null && status.equalsIgnoreCase("completed");
+    }
+
+    // Module Name Mapping (for reports and charts)
+    public String getModuleName() {
+        if (moduleId == null) return "Unknown Module";
+        switch (moduleId.toLowerCase()) {
+            case "module_abc_song":
+                return "ABC Song";
+            case "module_123_song":
+                return "123 Song";
+            case "module_feed_the_monster":
+                return "Feed the Monster";
+            case "module_match_the_letter":
+                return "Match the Letter";
+            case "module_memory_match":
+                return "Memory Match";
+            case "module_word_builder":
+                return "Word Builder";
+            case "module_my_family":
+                return "My Family Album";
+            default:
+                return moduleId; // fallback if unrecognized
+        }
+    }
+
+    // toString() for debugging
     @Override
     public String toString() {
         return "Progress{" +
                 "childId='" + childId + '\'' +
                 ", moduleId='" + moduleId + '\'' +
-                ", type='" + type + '\'' +
+                ", moduleName='" + getModuleName() + '\'' +
                 ", plays=" + plays +
                 ", score=" + score +
-                ", completed=" + completionStatus +
+                ", completed=" + isModuleCompleted() +
                 ", lastUpdated=" + lastUpdated +
                 '}';
-    }
-
-    public String getModuleName() {
-        return "";
     }
 }

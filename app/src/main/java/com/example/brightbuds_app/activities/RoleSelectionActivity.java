@@ -16,6 +16,7 @@ import com.example.brightbuds_app.R;
 import com.example.brightbuds_app.interfaces.DataCallbacks;
 import com.example.brightbuds_app.models.ChildProfile;
 import com.example.brightbuds_app.services.ChildProfileService;
+import com.example.brightbuds_app.utils.EncryptionUtil;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -26,8 +27,9 @@ import java.util.concurrent.Executors;
 
 /**
  * RoleSelectionActivity:
- * Dynamically lists all child profiles linked to the logged-in parent.
- * Uses encrypted child data from Firebase.
+ * Displays all children linked to the logged-in parent,
+ * with decrypted names, progress %, and star ratings
+ * based on the total of 7 available learning modules.
  */
 public class RoleSelectionActivity extends AppCompatActivity {
 
@@ -37,6 +39,7 @@ public class RoleSelectionActivity extends AppCompatActivity {
     private LinearLayout profilesContainer;
     private TextView txtTitle;
     private ExecutorService executor;
+    private static final int TOTAL_MODULES = 7; // Total learning modules available
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,7 +103,7 @@ public class RoleSelectionActivity extends AppCompatActivity {
         });
     }
 
-    /** Display decrypted children as cards */
+    /** Display decrypted children with accurate progress and stars */
     private void displayChildrenProfiles(List<ChildProfile> children) {
         LayoutInflater inflater = LayoutInflater.from(this);
         profilesContainer.removeAllViews();
@@ -112,23 +115,28 @@ public class RoleSelectionActivity extends AppCompatActivity {
             TextView txtStars = card.findViewById(R.id.txtStars);
             TextView txtProgress = card.findViewById(R.id.txtProgress);
 
-            // Use decrypted display name safely
-            String displayName = (child.getDisplayName() != null && !child.getDisplayName().isEmpty())
-                    ? child.getDisplayName()
-                    : "Child";
+            // Decrypt the name safely
+            String decryptedName = EncryptionUtil.decrypt(child.getName());
+            String displayName = (decryptedName != null && !decryptedName.isEmpty())
+                    ? decryptedName
+                    : (child.getDisplayName() != null ? child.getDisplayName() : "Child");
 
             String level = (child.getLearningLevel() != null && !child.getLearningLevel().isEmpty())
                     ? child.getLearningLevel()
-                    : "N/A";
+                    : "Beginner";
+
+            // Calculate progress & stars from completed modules
+            int completedModules = child.getCompletedModules(); // make sure this exists in model
+            double progress = ((double) completedModules / TOTAL_MODULES) * 100;
+            int progressRounded = (int) Math.min(progress, 100);
+
+            double stars = ((double) completedModules / TOTAL_MODULES) * 5;
+            int starsRounded = Math.min((int) Math.round(stars), 5);
 
             txtChildName.setText(displayName);
             txtLearningLevel.setText("Level: " + level);
-            txtStars.setText("⭐ " + child.getStars() + " Stars");
-
-            // Avoid multiplying by 100 twice
-            int progress = child.getProgress();
-            if (progress > 100) progress = 100;
-            txtProgress.setText("Progress: " + progress + "%");
+            txtStars.setText("⭐ " + starsRounded + " Star" + (starsRounded == 1 ? "" : "s"));
+            txtProgress.setText("Progress: " + progressRounded + "%");
 
             card.setOnClickListener(v -> {
                 Log.d(TAG, "👆 Selected child: " + displayName);
@@ -136,7 +144,10 @@ public class RoleSelectionActivity extends AppCompatActivity {
             });
 
             profilesContainer.addView(card);
-            Log.d(TAG, "   ✅ Added card for " + displayName);
+            Log.d(TAG, "   ✅ Added card for " + displayName +
+                    " | Completed=" + completedModules +
+                    " | Progress=" + progressRounded + "%" +
+                    " | Stars=" + starsRounded);
         }
 
         addParentProfileCard(inflater);
@@ -146,7 +157,7 @@ public class RoleSelectionActivity extends AppCompatActivity {
     private void openChildDashboard(ChildProfile child) {
         Intent intent = new Intent(this, ChildDashboardActivity.class);
         intent.putExtra("childId", child.getChildId());
-        intent.putExtra("childName", child.getDisplayName());
+        intent.putExtra("childName", EncryptionUtil.decrypt(child.getName()));
         startActivity(intent);
     }
 

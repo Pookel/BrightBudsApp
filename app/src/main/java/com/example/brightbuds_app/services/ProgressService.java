@@ -23,6 +23,8 @@ import java.util.Set;
 public class ProgressService {
 
     private static final String TAG = "ProgressService";
+    private static final int TOTAL_MODULES = 7;
+
     private final FirebaseFirestore db;
     private final DatabaseHelper localDb;
 
@@ -32,10 +34,12 @@ public class ProgressService {
     }
 
 
-    // PROGRESS RETRIEVAL
-    public void getAllProgressForParentWithChildren(String parentId, List<String> childIds, ProgressListCallback callback) {
+    // FETCH PROGRESS
+    public void getAllProgressForParentWithChildren(String parentId,
+                                                    List<String> childIds,
+                                                    ProgressListCallback callback) {
         if (childIds == null || childIds.isEmpty()) {
-            Log.w(TAG, "⚠️ No child IDs provided for parent: " + parentId);
+            Log.w(TAG, "⚠️ No child IDs for parent: " + parentId);
             callback.onSuccess(new ArrayList<>());
             return;
         }
@@ -43,32 +47,39 @@ public class ProgressService {
         db.collection("child_progress")
                 .whereEqualTo("parentId", parentId)
                 .get()
-                .addOnSuccessListener(querySnapshot -> {
+                .addOnSuccessListener(snapshot -> {
                     List<Progress> result = new ArrayList<>();
                     Set<String> foundChildIds = new HashSet<>();
 
-                    for (DocumentSnapshot doc : querySnapshot) {
-                        Progress progress = doc.toObject(Progress.class);
-                        if (progress != null) {
-                            progress.setProgressId(doc.getId());
-                            result.add(progress);
-                            foundChildIds.add(progress.getChildId());
-                            cacheProgressLocally(progress);
+                    for (DocumentSnapshot doc : snapshot) {
+                        Progress p = doc.toObject(Progress.class);
+                        if (p != null) {
+                            p.setProgressId(doc.getId());
+                            result.add(p);
+                            foundChildIds.add(p.getChildId());
+                            // from server → mark as synced locally
+                            cacheProgressLocally(p, true);
                         }
                     }
+
                     validateChildProgressConsistency(childIds, foundChildIds);
                     callback.onSuccess(result);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "❌ Firestore fetch failed (with children)", e);
+                    Log.e(TAG, "❌ Firestore fetch failed", e);
                     callback.onFailure(e);
                 });
     }
 
+    // MODULE COMPLETED
 
-    // MODULE COMPLETION
-    public void markModuleCompleted(String childId, String moduleId, int score, DataCallbacks.GenericCallback callback) {
-        Log.d(TAG, "🎯 markModuleCompleted - Child: " + childId + ", Module: " + moduleId + ", Score: " + score);
+    public void markModuleCompleted(String childId,
+                                    String moduleId,
+                                    int score,
+                                    DataCallbacks.GenericCallback callback) {
+
+        Log.d(TAG, "🎯 markModuleCompleted child=" + childId +
+                " module=" + moduleId + " score=" + score);
 
         var user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
@@ -77,36 +88,41 @@ public class ProgressService {
         }
 
         final String parentId = user.getUid();
-        Map<String, Object> progressData = createProgressData(parentId, childId, moduleId, score);
+        Map<String, Object> data = createProgressData(parentId, childId, moduleId, score);
 
         db.collection("child_progress")
-                .add(progressData)
+                .add(data)
                 .addOnSuccessListener(docRef -> {
-                    Log.i(TAG, "✅ Progress saved to Firestore (" + docRef.getId() + ")");
-                    cacheProgressRecord(docRef.getId(), parentId, childId, moduleId, score, "completed");
+                    Log.i(TAG, "✅ Progress saved online: " + docRef.getId());
+                    cacheProgressRecord(docRef.getId(), parentId, childId, moduleId,
+                            score, "completed", true);
+                    updateChildProgressStats(childId);
                     callback.onSuccess("Progress saved!");
                 })
-                .addOnFailureListener(e -> handleProgressSaveFailure(e, parentId, childId, moduleId, score, callback));
+                .addOnFailureListener(e ->
+                        handleProgressSaveFailure(e, parentId, childId, moduleId, score, callback));
     }
 
 
-    // LOG VIDEO PLAY COUNTS
-    public void logVideoPlay(String childId, String moduleId, DataCallbacks.GenericCallback callback) {
-        Log.d(TAG, "🎥 logVideoPlay - Child: " + childId + ", Module: " + moduleId);
+    // VIDEO PLAY
+    public void logVideoPlay(String childId,
+                             String moduleId,
+                             DataCallbacks.GenericCallback callback) {
+
+        Log.d(TAG, "🎥 logVideoPlay child=" + childId + " module=" + moduleId);
 
         var user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             callback.onFailure(new IllegalStateException("User not authenticated"));
             return;
         }
-        final String parentId = user.getUid();
-
         if (childId == null || moduleId == null) {
-            callback.onFailure(new IllegalArgumentException("Missing childId or moduleId"));
+            callback.onFailure(new IllegalArgumentException("Missing childId/moduleId"));
             return;
         }
 
-        String docId = childId + "_" + moduleId; // ensures consistent ID per module per child
+        final String parentId = user.getUid();
+        final String docId = childId + "_" + moduleId;
 
         Map<String, Object> data = new HashMap<>();
         data.put("parentId", parentId);
@@ -115,27 +131,36 @@ public class ProgressService {
         data.put("type", "video");
         data.put("status", "completed");
         data.put("completionStatus", true);
-        data.put("lastUpdated", System.currentTimeMillis());
         data.put("timestamp", System.currentTimeMillis());
+        data.put("lastUpdated", System.currentTimeMillis());
         data.put("score", 100);
-        data.put("plays", FieldValue.increment(1)); // properly increments play count
+        data.put("plays", FieldValue.increment(1));
 
         db.collection("child_progress")
                 .document(docId)
                 .set(data, SetOptions.merge())
-                .addOnSuccessListener(aVoid -> {
-                    Log.i(TAG, "✅ Video play logged: " + docId);
-                    cacheProgressRecord(docId, parentId, childId, moduleId, 100, "video_played");
+                .addOnSuccessListener(unused -> {
+                    Log.i(TAG, "✅ Video play logged online: " + docId);
+                    cacheProgressRecord(docId, parentId, childId, moduleId,
+                            100, "video_played", true);
+                    updateChildProgressStats(childId);
                     callback.onSuccess("Video play recorded");
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "❌ Failed to log video play", e);
-                    callback.onFailure(e);
+                    Log.e(TAG, "❌ Failed to log video play online, caching", e);
+                    cacheProgressRecord(docId, parentId, childId, moduleId,
+                            100, "video_played", false);
+                    callback.onSuccess("Saved locally (offline mode)");
                 });
     }
 
-    // COMPLETION PERCENTAGE UPDATE
-    public void setCompletionPercentage(String parentId, String childId, String moduleId, int percentage, DataCallbacks.GenericCallback callback) {
+    // SET COMPLETION %
+    public void setCompletionPercentage(String parentId,
+                                        String childId,
+                                        String moduleId,
+                                        int percentage,
+                                        DataCallbacks.GenericCallback callback) {
+
         db.collection("child_progress")
                 .whereEqualTo("parentId", parentId)
                 .whereEqualTo("childId", childId)
@@ -151,76 +176,173 @@ public class ProgressService {
                 .addOnFailureListener(callback::onFailure);
     }
 
-    // UTILITIES
-    private Map<String, Object> createProgressData(String parentId, String childId, String moduleId, int score) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("parentId", parentId);
-        data.put("childId", childId);
-        data.put("moduleId", moduleId);
-        data.put("score", score);
-        data.put("status", "completed");
-        data.put("timestamp", System.currentTimeMillis());
-        data.put("timeSpent", 0L);
-        return data;
+    // INTERNAL HELPERS
+    private Map<String, Object> createProgressData(String parentId,
+                                                   String childId,
+                                                   String moduleId,
+                                                   int score) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("parentId", parentId);
+        m.put("childId", childId);
+        m.put("moduleId", moduleId);
+        m.put("score", score);
+        m.put("status", "completed");
+        m.put("completionStatus", score >= 70);
+        m.put("timestamp", System.currentTimeMillis());
+        m.put("timeSpent", 0L);
+        m.put("plays", 1);
+        return m;
     }
 
-    private void cacheProgressLocally(Progress progress) {
+    private void cacheProgressLocally(Progress p, boolean isSynced) {
         localDb.insertOrUpdateProgress(
-                progress.getProgressId(),
-                progress.getParentId(),
-                progress.getChildId(),
-                progress.getModuleId(),
-                (int) progress.getScore(),
-                progress.getStatus(),
-                System.currentTimeMillis(),
-                progress.getTimeSpent()
+                p.getProgressId(),
+                p.getParentId(),
+                p.getChildId(),
+                p.getModuleId(),
+                (int) p.getScore(),
+                p.getStatus(),
+                p.getTimestamp(),
+                p.getTimeSpent(),
+                isSynced
         );
     }
 
-    private void cacheProgressRecord(String docId, String parentId, String childId, String moduleId, int score, String status) {
-        localDb.insertOrUpdateProgress(docId, parentId, childId, moduleId, score, status, System.currentTimeMillis(), 0L);
+    private void cacheProgressRecord(String id,
+                                     String parentId,
+                                     String childId,
+                                     String moduleId,
+                                     int score,
+                                     String status,
+                                     boolean isSynced) {
+        localDb.insertOrUpdateProgress(
+                id,
+                parentId,
+                childId,
+                moduleId,
+                score,
+                status,
+                System.currentTimeMillis(),
+                0L,
+                isSynced
+        );
     }
 
-    private void handleProgressSaveFailure(Exception e, String parentId, String childId, String moduleId, int score, DataCallbacks.GenericCallback callback) {
-        Log.e(TAG, "❌ Firestore failed - saving locally", e);
-        cacheProgressRecord(String.valueOf(System.currentTimeMillis()), parentId, childId, moduleId, score, "completed");
+    private void handleProgressSaveFailure(Exception e,
+                                           String parentId,
+                                           String childId,
+                                           String moduleId,
+                                           int score,
+                                           DataCallbacks.GenericCallback callback) {
+
+        Log.e(TAG, "❌ Firestore unavailable, caching offline", e);
+        String localId = "offline_" + System.currentTimeMillis();
+        cacheProgressRecord(localId, parentId, childId, moduleId,
+                score, "completed", false);
         callback.onSuccess("Saved locally (offline mode)");
     }
 
-    private void validateChildProgressConsistency(List<String> expectedChildIds, Set<String> foundChildIds) {
-        for (String childId : expectedChildIds) {
-            if (!foundChildIds.contains(childId)) {
-                Log.w(TAG, "⚠️ No progress found for child: " + childId);
+    private void validateChildProgressConsistency(List<String> expected, Set<String> found) {
+        for (String id : expected) {
+            if (!found.contains(id)) {
+                Log.w(TAG, "⚠️ No progress found for child: " + id);
             }
         }
     }
 
-    private void updateExistingProgress(QuerySnapshot snapshot, int percentage, DataCallbacks.GenericCallback callback) {
-        String docId = snapshot.getDocuments().get(0).getId();
+    private void updateExistingProgress(QuerySnapshot snapshot,
+                                        int percentage,
+                                        DataCallbacks.GenericCallback callback) {
+
+        DocumentSnapshot doc = snapshot.getDocuments().get(0);
+        String docId = doc.getId();
+        String childId = doc.getString("childId");
+        String parentId = doc.getString("parentId");
+        String moduleId = doc.getString("moduleId");
+
         String status = percentage >= 100 ? "completed" : "in_progress";
 
         db.collection("child_progress").document(docId)
-                .update("score", percentage, "status", status, "timestamp", System.currentTimeMillis())
-                .addOnSuccessListener(aVoid -> {
-                    Log.i(TAG, "✅ Updated progress record: " + docId);
+                .update(
+                        "score", percentage,
+                        "status", status,
+                        "completionStatus", percentage >= 70,
+                        "timestamp", System.currentTimeMillis()
+                )
+                .addOnSuccessListener(unused -> {
+                    Log.i(TAG, "✅ Updated progress online: " + docId);
+                    if (childId != null && parentId != null && moduleId != null) {
+                        cacheProgressRecord(docId, parentId, childId, moduleId,
+                                percentage, status, true);
+                        updateChildProgressStats(childId);
+                    }
                     callback.onSuccess("Progress updated!");
                 })
-                .addOnFailureListener(callback::onFailure);
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Failed to update online, caching", e);
+                    if (childId != null && parentId != null && moduleId != null) {
+                        cacheProgressRecord(docId, parentId, childId, moduleId,
+                                percentage, status, false);
+                    }
+                    callback.onFailure(e);
+                });
     }
 
-    public double calculateAverageScore(List<Progress> progressList) {
-        if (progressList == null || progressList.isEmpty()) return 0;
+    /** Recalculate child-level progress & stars from child_progress */
+    private void updateChildProgressStats(String childId) {
+        db.collection("child_progress")
+                .whereEqualTo("childId", childId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot.isEmpty()) return;
+
+                    int completedModules = 0;
+
+                    for (DocumentSnapshot doc : snapshot) {
+                        Progress p = doc.toObject(Progress.class);
+                        if (p == null) continue;
+
+                        boolean completed =
+                                p.getScore() >= 70 ||
+                                        "completed".equalsIgnoreCase(p.getStatus()) ||
+                                        p.isCompletionStatus();
+
+                        if (completed) completedModules++;
+                    }
+
+                    double ratio = completedModules / (double) TOTAL_MODULES;
+                    int progressPercent = (int) Math.round(Math.min(1.0, ratio) * 100.0);
+                    int stars = (int) Math.round(Math.min(1.0, ratio) * 5.0);
+
+                    Log.d(TAG, "🌟 Stats child=" + childId +
+                            " completed=" + completedModules +
+                            " progress=" + progressPercent +
+                            "% stars=" + stars);
+
+                    db.collection("child_profiles").document(childId)
+                            .update("progress", progressPercent, "stars", stars)
+                            .addOnSuccessListener(unused ->
+                                    Log.i(TAG, "✅ Child profile updated"))
+                            .addOnFailureListener(e ->
+                                    Log.e(TAG, "❌ Failed to update child profile", e));
+                })
+                .addOnFailureListener(e ->
+                        Log.e(TAG, "❌ Failed to fetch child progress", e));
+    }
+
+    // Analytics helper
+    public double calculateAverageScore(List<Progress> list) {
+        if (list == null || list.isEmpty()) return 0;
         double total = 0;
-        int count = 0;
-        for (Progress p : progressList) {
-            total += p.getScore();
-            count++;
-        }
-        return count > 0 ? total / count : 0;
+        for (Progress p : list) total += p.getScore();
+        return total / list.size();
     }
 
-    // Dummy method retained to avoid app crash from old references
+    // Legacy no-arg
     public void logVideoPlay() {
         Log.d(TAG, "⚠️ Deprecated logVideoPlay() called with no parameters.");
+    }
+
+    public void autoSyncOfflineProgress() {
     }
 }

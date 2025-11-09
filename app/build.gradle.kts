@@ -15,6 +15,9 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField("String", "BRIGHTBUDS_KEY", "\"${project.findProperty("BRIGHTBUDS_KEY") ?: ""}\"")
+
     }
 
     buildTypes {
@@ -32,6 +35,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     compileOptions {
