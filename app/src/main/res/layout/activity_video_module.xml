@@ -1,68 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center_horizontal"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@drawable/whimsical_background"
+    android:padding="8dp">
 
-    <TextView
-        android:id="@+id/txtStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Loading..."
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:id="@+id/txtChildName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="🎵 Playing ABC Song"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:padding="12dp"
-        android:textColor="@color/black" />
-
-    <androidx.media3.ui.PlayerView
-        android:id="@+id/playerView"
-        android:layout_width="match_parent"
+    <!-- BIG VIDEO AREA -->
+    <VideoView
+        android:id="@+id/videoViewSong"
+        android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginVertical="8dp"
-        android:keepScreenOn="true"
-        android:background="@android:color/black"
-        app:use_controller="true"
-        app:resize_mode="fit" />
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/videoControlsRow" />
 
-    <ProgressBar
-        android:id="@+id/progress"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:indeterminate="true"
-        android:layout_margin="16dp" />
-
+    <!-- PLAY / PAUSE / STOP (LOWER ON SCREEN) -->
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:id="@+id/videoControlsRow"
+        android:layout_width="342dp"
+        android:layout_height="81dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavRow"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnPlayPause"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Pause"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_marginEnd="8dp" />
+        <ImageButton
+            android:id="@+id/btnVideoPlay"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_margin="8dp"
+            android:background="@android:color/transparent"
+            android:backgroundTint="@null"
+            android:drawableTint="@null"
+            android:scaleType="fitCenter"
+            android:src="@drawable/button_play" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnStop"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Stop"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+        <ImageButton
+            android:id="@+id/btnVideoPause"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_margin="8dp"
+            android:background="@android:color/transparent"
+            android:backgroundTint="@null"
+            android:drawableTint="@null"
+            android:scaleType="fitCenter"
+            android:src="@drawable/button_pause" />
+
+        <ImageButton
+            android:id="@+id/btnVideoStop"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_margin="8dp"
+            android:background="@android:color/transparent"
+            android:backgroundTint="@null"
+            android:drawableTint="@null"
+            android:scaleType="fitCenter"
+            android:src="@drawable/button_stop" />
     </LinearLayout>
-</LinearLayout>
+
+    <!-- BOTTOM ROW (EVEN LOWER) -->
+    <LinearLayout
+        android:id="@+id/bottomNavRow"
+        android:layout_width="397dp"
+        android:layout_height="66dp"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnVideoClose"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:background="@android:color/transparent"
+            android:backgroundTint="@null"
+            android:drawableTint="@null"
+            android:scaleType="fitCenter"
+            android:src="@drawable/close_icon" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btnVideoHome"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:background="@android:color/transparent"
+            android:backgroundTint="@null"
+            android:drawableTint="@null"
+            android:scaleType="fitCenter"
+            android:src="@drawable/home_icon" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

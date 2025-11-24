@@ -7,6 +7,7 @@ import android.graphics.Rect;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.speech.tts.TextToSpeech;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -25,7 +26,9 @@ import androidx.fragment.app.Fragment;
 import com.example.brightbuds_app.R;
 import com.example.brightbuds_app.interfaces.DataCallbacks;
 import com.example.brightbuds_app.services.ProgressService;
-import com.example.brightbuds_app.utils.Constants;
+import com.example.brightbuds_app.utils.AnalyticsSessionManager;
+import com.example.brightbuds_app.utils.CurrentChildManager;
+import com.example.brightbuds_app.utils.ModuleIds;
 
 import java.util.Locale;
 import java.util.Random;
@@ -73,13 +76,15 @@ public class FeedTheMonsterFragment extends Fragment {
     private static final String PREFS = "brightbuds_game_prefs";
     private static final String KEY_TIMES_PLAYED = "feed_monster_times_played";
 
-    // Services and audio
-    private ProgressService progressService;
+    // Audio
     private MediaPlayer bgMusic;
     private TextToSpeech tts;
 
-    // Child selection
-    private String selectedChildId;
+    // Analytics
+    private AnalyticsSessionManager analyticsManager;
+    private ProgressService progressService;
+    private String childId;
+    private boolean analyticsSaved = false;
 
     @Nullable
     @Override
@@ -107,11 +112,25 @@ public class FeedTheMonsterFragment extends Fragment {
         btnHomeIcon = v.findViewById(R.id.btnHomeIcon);
         btnCloseIcon = v.findViewById(R.id.btnCloseIcon);
 
-        // Initialise services and child reference
+        // Child id
+        childId = CurrentChildManager.getCurrentChildId(requireContext());
+
+        // Analytics
         progressService = new ProgressService(requireContext());
-        SharedPreferences parentPrefs =
-                requireContext().getSharedPreferences("BrightBudsPrefs", Context.MODE_PRIVATE);
-        selectedChildId = parentPrefs.getString("selectedChildId", null);
+        analyticsManager = new AnalyticsSessionManager(
+                requireContext(),
+                childId,
+                ModuleIds.MODULE_FEED_MONSTER
+        );
+        analyticsManager.startSession();
+
+        // Session start time
+        sessionStartMs = SystemClock.elapsedRealtime();
+
+        // Persistent play tracking for "times played" metric
+        SharedPreferences sp = requireContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        timesPlayed = sp.getInt(KEY_TIMES_PLAYED, 0) + 1;
+        sp.edit().putInt(KEY_TIMES_PLAYED, timesPlayed).apply();
 
         // Background music setup
         bgMusic = MediaPlayer.create(requireContext(), R.raw.monster_music);
@@ -130,22 +149,17 @@ public class FeedTheMonsterFragment extends Fragment {
             }
         });
 
-        // Persistent play tracking
-        SharedPreferences sp = requireContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        timesPlayed = sp.getInt(KEY_TIMES_PLAYED, 0) + 1;
-        sp.edit().putInt(KEY_TIMES_PLAYED, timesPlayed).apply();
-
-        // Home and Close both just finish this screen
+        // Close game and finish Activity
         View.OnClickListener endGame = view1 -> {
-            saveSessionMetricsSafely();
+            endAnalyticsSession();
             stopAudioTts();
             requireActivity().finish();
         };
+
         btnHomeIcon.setOnClickListener(endGame);
         btnCloseIcon.setOnClickListener(endGame);
 
-        // Start session and first round
-        sessionStartMs = System.currentTimeMillis();
+        // Start first round
         startRound(true);
     }
 
@@ -170,11 +184,11 @@ public class FeedTheMonsterFragment extends Fragment {
 
         updateTargetNumberImage(targetNumber);
 
+        // Remove any cookies left from previous round
         playArea.removeAllViews();
-        // ten cookies each round
         createCookiesForRound(10);
 
-        speak("Feed me " + targetNumber + " cookies");
+        speakPrompt("Feed me " + targetNumber + " cookies");
         pulse(tvTarget);
     }
 
@@ -191,7 +205,7 @@ public class FeedTheMonsterFragment extends Fragment {
             case 8:  resId = R.drawable.number_8;  break;
             case 9:  resId = R.drawable.number_9;  break;
             case 10: resId = R.drawable.number_10; break;
-            default: resId = 0;                     break;
+            default: resId = 0; break;
         }
 
         if (resId != 0) {
@@ -206,23 +220,20 @@ public class FeedTheMonsterFragment extends Fragment {
         playArea.post(() -> {
             int width = playArea.getWidth();
             int height = playArea.getHeight();
-
             if (width <= 0 || height <= 0) return;
 
-            int size = dp(110); // cookie size
+            int size = dp(110);
             int margin = dp(6);
 
             for (int i = 0; i < cookieCount; i++) {
                 ImageView cookie = new ImageView(requireContext());
                 cookie.setImageResource(R.drawable.cookie);
-                cookie.setContentDescription("Cookie");
                 cookie.setScaleType(ImageView.ScaleType.FIT_CENTER);
 
                 FrameLayout.LayoutParams lp =
                         new FrameLayout.LayoutParams(size, size);
                 cookie.setLayoutParams(lp);
 
-                // Let cookies START on the right half of the screen
                 int totalMaxX = width - size - margin;
                 int halfWidth = width / 2;
                 int minX = halfWidth;
@@ -240,8 +251,6 @@ public class FeedTheMonsterFragment extends Fragment {
         });
     }
 
-
-
     // endregion
 
     // region Drag and drop logic
@@ -254,9 +263,7 @@ public class FeedTheMonsterFragment extends Fragment {
 
         @Override
         public boolean onTouch(View view, MotionEvent event) {
-            if (roundLocked) {
-                return false;
-            }
+            if (roundLocked) return false;
 
             playArea.getLocationOnScreen(playAreaLocation);
 
@@ -292,9 +299,7 @@ public class FeedTheMonsterFragment extends Fragment {
     };
 
     private void handleCookieDrop(View cookieView) {
-        if (roundLocked) {
-            return;
-        }
+        if (roundLocked) return;
 
         Rect monsterRect = new Rect();
         Rect cookieRect = new Rect();
@@ -316,7 +321,8 @@ public class FeedTheMonsterFragment extends Fragment {
         cookiesFedThisRound++;
 
         progressRound.setProgress(Math.min(cookiesFedThisRound, targetNumber));
-        speak(String.valueOf(cookiesFedThisRound));
+
+        speakNumber(String.valueOf(cookiesFedThisRound));
 
         if (cookiesFedThisRound == targetNumber) {
             handleCorrectAnswer();
@@ -328,8 +334,7 @@ public class FeedTheMonsterFragment extends Fragment {
         wrongStreak++;
         imgMonster.setImageResource(R.drawable.monster_sad);
         shake(imgMonster);
-        speak("Try again");
-        saveSessionMetricsIncremental();
+        speakPrompt("Try again");
         updateStats();
 
         if (wrongStreak >= 5 && !roundLocked) {
@@ -348,8 +353,8 @@ public class FeedTheMonsterFragment extends Fragment {
         imgMonster.setImageResource(R.drawable.monster_happy);
         showStarFlash();
         wiggle(imgMonster);
-        speak("Yay");
-        saveSessionMetricsIncremental();
+
+        speakPraise("Yay");
         updateStats();
 
         imgMonster.postDelayed(this::advanceRound, 900);
@@ -363,7 +368,7 @@ public class FeedTheMonsterFragment extends Fragment {
 
     // endregion
 
-    // region Visual feedback and animations
+    // region Visual feedback
 
     private void updateStats() {
         tvStats.setText(
@@ -436,102 +441,52 @@ public class FeedTheMonsterFragment extends Fragment {
 
     // endregion
 
-    // region Persistence
+    // region Analytics end and lifecycle
 
-    private void saveSessionMetricsIncremental() {
-        if (selectedChildId == null) {
+    private void endAnalyticsSession() {
+        if (analyticsManager == null || analyticsSaved) {
             return;
         }
 
-        long now = System.currentTimeMillis();
-        long timeSpent = Math.max(0L, now - sessionStartMs);
-        int plays = Math.max(1, timesPlayed);
+        long sessionEndMs = SystemClock.elapsedRealtime();
+        long durationMs = Math.max(0L, sessionEndMs - sessionStartMs);
+        int totalAttempts = totalCorrect + totalIncorrect;
 
-        progressService.recordGameSession(
-                selectedChildId,
-                Constants.GAME_FEED_MONSTER,
+        // Completed if at least one round was played
+        int completedFlag = sessionRounds > 0 ? 1 : 0;
+
+        // 1. Detailed analytics to SQLite via AnalyticsSessionManager
+        analyticsManager.endSession(
                 score,
-                timeSpent,
-                stars,
                 totalCorrect,
-                totalIncorrect,
-                plays,
-                new DataCallbacks.GenericCallback() {
-                    @Override
-                    public void onSuccess(String result) { }
-
-                    @Override
-                    public void onFailure(Exception e) { }
-                }
-        );
-    }
-
-    private void saveSessionMetricsSafely() {
-        if (selectedChildId == null) {
-            return;
-        }
-
-        long now = System.currentTimeMillis();
-        long timeSpent = Math.max(0L, now - sessionStartMs);
-        int plays = Math.max(1, timesPlayed);
-
-        progressService.recordGameSession(
-                selectedChildId,
-                Constants.GAME_FEED_MONSTER,
-                score,
-                timeSpent,
+                totalAttempts,
                 stars,
-                totalCorrect,
-                totalIncorrect,
-                plays,
-                new DataCallbacks.GenericCallback() {
-                    @Override
-                    public void onSuccess(String result) { }
-
-                    @Override
-                    public void onFailure(Exception e) { }
-                }
+                completedFlag
         );
+        analyticsManager = null;
+
+        // 2. Summary to Firestore if we have a child id
+        if (childId != null) {
+            progressService.recordGameSession(
+                    childId,
+                    ModuleIds.MODULE_FEED_MONSTER,
+                    score,
+                    durationMs,     // timeSpentMs
+                    stars,          // stars
+                    totalCorrect,   // correct
+                    totalIncorrect, // incorrect
+                    timesPlayed,    // plays
+                    new DataCallbacks.GenericCallback() {
+                        @Override public void onSuccess(String result) { }
+
+                        @Override public void onFailure(Exception e) { }
+                    }
+            );
+        }
+
+        analyticsSaved = true;
     }
 
-    // endregion
-
-    // region Utilities and lifecycle
-
-    private void speak(String text) {
-        if (tts == null) {
-            return;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "feed_monster_tts");
-        } else {
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null);
-        }
-    }
-
-    private int dp(int value) {
-        float scale = getResources().getDisplayMetrics().density;
-        return (int) (value * scale + 0.5f);
-    }
-
-    private void stopAudioTts() {
-        if (bgMusic != null) {
-            try {
-                if (bgMusic.isPlaying()) {
-                    bgMusic.stop();
-                }
-            } catch (Exception ignored) { }
-            bgMusic.release();
-            bgMusic = null;
-        }
-        if (tts != null) {
-            try {
-                tts.stop();
-            } catch (Exception ignored) { }
-            tts.shutdown();
-            tts = null;
-        }
-    }
 
     @Override
     public void onPause() {
@@ -539,7 +494,7 @@ public class FeedTheMonsterFragment extends Fragment {
         if (bgMusic != null && bgMusic.isPlaying()) {
             bgMusic.pause();
         }
-        saveSessionMetricsSafely();
+        endAnalyticsSession();
     }
 
     @Override
@@ -552,9 +507,58 @@ public class FeedTheMonsterFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
-        saveSessionMetricsSafely();
+        endAnalyticsSession();
         super.onDestroyView();
         stopAudioTts();
+    }
+
+    // endregion
+
+    // region Audio and helpers
+
+    private void speakPrompt(String text) {
+        speakInternal(text, TextToSpeech.QUEUE_FLUSH);
+    }
+
+    private void speakNumber(String text) {
+        speakInternal(text, TextToSpeech.QUEUE_FLUSH);
+    }
+
+    private void speakPraise(String text) {
+        speakInternal(text, TextToSpeech.QUEUE_ADD);
+    }
+
+    private void speakInternal(String text, int mode) {
+        if (tts == null) return;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            tts.speak(text, mode, null, "feed_monster_tts");
+        } else {
+            tts.speak(text, mode, null);
+        }
+    }
+
+    private int dp(int value) {
+        float scale = getResources().getDisplayMetrics().density;
+        return (int) (value * scale + 0.5f);
+    }
+
+    private void stopAudioTts() {
+        if (bgMusic != null) {
+            try {
+                if (bgMusic.isPlaying()) bgMusic.stop();
+            } catch (Exception ignored) { }
+            bgMusic.release();
+            bgMusic = null;
+        }
+
+        if (tts != null) {
+            try {
+                tts.stop();
+            } catch (Exception ignored) { }
+            tts.shutdown();
+            tts = null;
+        }
     }
 
     // endregion

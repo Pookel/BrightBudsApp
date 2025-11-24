@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layoutChildProfileRoot"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="8dp">
+
+    <!-- Large avatar icon -->
+    <ImageView
+        android:id="@+id/imgChildAvatar"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:src="@drawable/ic_child_avatar_placeholder"
+        android:contentDescription="Child avatar"
+        android:adjustViewBounds="true"
+        android:scaleType="centerCrop" />
+
+    <!-- Child name -->
+    <TextView
+        android:id="@+id/tvChildName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Child 1"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/white" />
+
+    <!-- Age and level line -->
+    <TextView
+        android:id="@+id/tvChildDetails"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Age: -  •  Level: -"
+        android:textSize="13sp"
+        android:textColor="@android:color/white" />
+
+    <!-- Child code or slot label -->
+    <TextView
+        android:id="@+id/tvChildCode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="Profile slot"
+        android:textSize="11sp"
+        android:textColor="@android:color/white" />
+
+</LinearLayout>

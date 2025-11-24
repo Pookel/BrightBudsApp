@@ -4,7 +4,6 @@ import android.content.Context;
 import android.util.Log;
 
 import com.example.brightbuds_app.interfaces.DataCallbacks;
-import com.example.brightbuds_app.models.User;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;

@@ -1,140 +1,281 @@
 package com.example.brightbuds_app.activities;
 
+import android.animation.ObjectAnimator;
 import android.content.Intent;
+import android.media.MediaPlayer;
 import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.ImageButton;
+import android.text.TextUtils;
+import android.view.animation.LinearInterpolator;
+import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
 import com.example.brightbuds_app.R;
-import com.example.brightbuds_app.interfaces.DataCallbacks;
 import com.example.brightbuds_app.models.ChildProfile;
-import com.example.brightbuds_app.services.ChildProfileService;
-import com.example.brightbuds_app.utils.EncryptionUtil;
+import com.example.brightbuds_app.services.DatabaseHelper;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
+import java.util.ArrayList;
 import java.util.List;
 
-/**
- * ChildSelectionActivity
- * Allows child users to select their profile
- * Decrypts child name before showing
- */
 public class ChildSelectionActivity extends AppCompatActivity {
 
-    private ChildProfileService childService;
-    private LinearLayout childrenContainer;
-    private LinearLayout loadingLayout;
+    private RecyclerView rvChildren;
+    private Button btnParentSettings;     // CHANGED FROM ImageView TO Button
+    private ImageView imgBubbles;
+
+    private MediaPlayer bgPlayer;
+    private MediaPlayer flipPlayer;
+
+    private final List<ChildProfile> childProfiles = new ArrayList<>();
+    private ChildAdapter childAdapter;
+    private DatabaseHelper databaseHelper;
+
+    private FirebaseAuth auth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_child_selection);
 
-        childService = new ChildProfileService();
-        childrenContainer = findViewById(R.id.childrenContainer);
-        loadingLayout = findViewById(R.id.loadingLayout);
+        auth = FirebaseAuth.getInstance();
+        databaseHelper = new DatabaseHelper(this);
 
-        // Setup back button
-        ImageButton btnBack = findViewById(R.id.btnBack);
-        btnBack.setOnClickListener(v -> finish());
-
-        loadChildren();
+        initViews();
+        setupRecycler();
+        loadChildProfilesForCurrentParent();
+        setupSettingsButton();
+        startBackgroundMusic();
+        startBubbleAnimation();
     }
 
-    private void loadChildren() {
-        String parentId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+    private void initViews() {
+        rvChildren = findViewById(R.id.rvChildren);
+        btnParentSettings = findViewById(R.id.btnParentSettings);  // updated type
+        imgBubbles = findViewById(R.id.imgBubblesSelection);
+    }
 
-        childService.getChildrenForCurrentParent(new DataCallbacks.ChildrenListCallback() {
-            @Override
-            public void onSuccess(List<ChildProfile> children) {
-                loadingLayout.setVisibility(View.GONE);
+    private void setupRecycler() {
+        rvChildren.setLayoutManager(new GridLayoutManager(this, 3));
+        childAdapter = new ChildAdapter(childProfiles, this::onChildSelected);
+        rvChildren.setAdapter(childAdapter);
+    }
 
-                if (children.isEmpty()) {
-                    showEmptyState();
-                } else {
-                    for (ChildProfile child : children) {
-                        addChildCard(child);
-                    }
+    private void loadChildProfilesForCurrentParent() {
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) {
+            Toast.makeText(this, "No logged in parent. Please sign in.", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+
+        String parentId = user.getUid();
+        childProfiles.clear();
+
+        List<ChildProfile> fromDb = databaseHelper.getChildProfilesForParent(parentId);
+        if (fromDb != null) {
+            for (ChildProfile c : fromDb) {
+                if (!isDefaultProfile(c)) {
+                    childProfiles.add(c);
                 }
             }
+        }
 
-            @Override
-            public void onFailure(Exception e) {
-                loadingLayout.setVisibility(View.GONE);
-                showErrorState();
-            }
+        if (childProfiles.isEmpty()) {
+            Toast.makeText(this,
+                    "No child profiles found. Please edit a profile first.",
+                    Toast.LENGTH_LONG).show();
+        }
+
+        childAdapter.notifyDataSetChanged();
+    }
+
+    private boolean isDefaultProfile(ChildProfile child) {
+        if (child == null) return true;
+
+        String name = child.getName();
+        int age = child.getAge();
+        String level = child.getLearningLevel();
+        String w1 = child.getWord1();
+        String w2 = child.getWord2();
+        String w3 = child.getWord3();
+        String w4 = child.getWord4();
+
+        boolean nameLooksDefault =
+                TextUtils.isEmpty(name)
+                        || name.trim().isEmpty()
+                        || name.trim().startsWith("Child ");
+
+        boolean ageDefault = age <= 0;
+
+        boolean levelDefault =
+                TextUtils.isEmpty(level)
+                        || "Beginner".equalsIgnoreCase(level.trim());
+
+        boolean noWords =
+                TextUtils.isEmpty(w1)
+                        && TextUtils.isEmpty(w2)
+                        && TextUtils.isEmpty(w3)
+                        && TextUtils.isEmpty(w4);
+
+        return nameLooksDefault && ageDefault && levelDefault && noWords;
+    }
+
+    private void setupSettingsButton() {
+        btnParentSettings.setOnClickListener(v -> {
+            Intent intent = new Intent(
+                    ChildSelectionActivity.this,
+                    ParentDashboardActivity.class
+            );
+            startActivity(intent);
         });
     }
 
-    private void addChildCard(ChildProfile child) {
-        CardView card = (CardView) LayoutInflater.from(this)
-                .inflate(R.layout.item_child_selection_card, childrenContainer, false);
-
-        TextView txtChildName = card.findViewById(R.id.txtChildName);
-        TextView txtChildAge = card.findViewById(R.id.txtChildAge);
-
-        // Safely decrypt display name
-        String decryptedName = EncryptionUtil.decrypt(child.getDisplayName());
-        if (decryptedName == null || decryptedName.isEmpty()) {
-            decryptedName = EncryptionUtil.decrypt(child.getName());
-        }
-        if (decryptedName == null || decryptedName.isEmpty()) {
-            decryptedName = "Child";
+    private void onChildSelected(ChildProfile child) {
+        if (flipPlayer != null) {
+            flipPlayer.release();
+            flipPlayer = null;
         }
 
-        txtChildName.setText(decryptedName);
-        txtChildAge.setText(child.getAge() + " years old");
-
-        // Load avatar if available
-        if (child.getAvatarUrl() != null && !child.getAvatarUrl().isEmpty()) {
-            Glide.with(this)
-                    .load(child.getAvatarUrl())
-                    .placeholder(R.drawable.ic_child_placeholder)
-                    .error(R.drawable.ic_child_placeholder)
-                    .circleCrop()
-                    .into(card.<ImageView>findViewById(R.id.imgChildAvatar));
+        flipPlayer = MediaPlayer.create(this, R.raw.card_flip);
+        if (flipPlayer != null) {
+            flipPlayer.setOnCompletionListener(mp -> {
+                mp.release();
+                flipPlayer = null;
+                openChildDashboard(child);
+            });
+            flipPlayer.start();
+        } else {
+            openChildDashboard(child);
         }
-
-        card.setOnClickListener(v -> startChildDashboard(child));
-        childrenContainer.addView(card);
     }
 
-    private void startChildDashboard(ChildProfile child) {
-        Intent intent = new Intent(this, ChildDashboardActivity.class);
-        intent.putExtra("childId", child.getChildId());
-        // Pass encrypted name (will be decrypted again in ChildDashboardActivity)
-        intent.putExtra("childName", child.getName());
+    private void openChildDashboard(ChildProfile child) {
+        Intent intent = new Intent(ChildSelectionActivity.this, ChildDashboardActivity.class);
+        intent.putExtra("child_id", child.getChildId());
+        intent.putExtra("child_name", child.getName());
+        intent.putExtra("child_avatar_key", child.getAvatarKey());
         startActivity(intent);
-        finish();
     }
 
-    private void showEmptyState() {
-        View emptyView = LayoutInflater.from(this)
-                .inflate(R.layout.item_empty_children, childrenContainer, false);
-        childrenContainer.addView(emptyView);
 
-        TextView emptyText = emptyView.findViewById(R.id.txtEmpty);
-        emptyText.setText("No child profiles found. Please ask a parent to add your profile.");
+    private void startBackgroundMusic() {
+        if (bgPlayer == null) {
+            bgPlayer = MediaPlayer.create(this, R.raw.happy_children);
+            if (bgPlayer != null) {
+                bgPlayer.setLooping(true);
+                bgPlayer.start();
+            }
+        } else if (!bgPlayer.isPlaying()) {
+            bgPlayer.start();
+        }
     }
 
-    private void showErrorState() {
-        View errorView = LayoutInflater.from(this)
-                .inflate(R.layout.item_error_children, childrenContainer, false);
-        childrenContainer.addView(errorView);
+    private void startBubbleAnimation() {
+        if (imgBubbles == null) return;
 
-        errorView.findViewById(R.id.btnRetry).setOnClickListener(v -> {
-            childrenContainer.removeAllViews();
-            loadingLayout.setVisibility(View.VISIBLE);
-            loadChildren();
-        });
+        ObjectAnimator animator = ObjectAnimator.ofFloat(
+                imgBubbles,
+                "translationY",
+                -40f,
+                40f
+        );
+        animator.setDuration(3000);
+        animator.setRepeatCount(ObjectAnimator.INFINITE);
+        animator.setRepeatMode(ObjectAnimator.REVERSE);
+        animator.setInterpolator(new LinearInterpolator());
+        animator.start();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (bgPlayer != null && bgPlayer.isPlaying()) {
+            bgPlayer.pause();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (bgPlayer != null && !bgPlayer.isPlaying()) {
+            bgPlayer.start();
+        }
+        loadChildProfilesForCurrentParent();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (bgPlayer != null) {
+            bgPlayer.stop();
+            bgPlayer.release();
+            bgPlayer = null;
+        }
+        if (flipPlayer != null) {
+            flipPlayer.release();
+            flipPlayer = null;
+        }
+    }
+
+    // RecyclerView adapter
+    private static class ChildAdapter extends RecyclerView.Adapter<ChildAdapter.ChildViewHolder> {
+
+        interface OnChildClickListener {
+            void onChildClick(ChildProfile child);
+        }
+
+        private final List<ChildProfile> children;
+        private final OnChildClickListener clickListener;
+
+        ChildAdapter(List<ChildProfile> children, OnChildClickListener clickListener) {
+            this.children = children;
+            this.clickListener = clickListener;
+        }
+
+        @NonNull
+        @Override
+        public ChildViewHolder onCreateViewHolder(@NonNull android.view.ViewGroup parent, int viewType) {
+            android.view.View view = android.view.LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_child_avatar, parent, false);
+            return new ChildViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ChildViewHolder holder, int position) {
+            holder.bind(children.get(position), clickListener);
+        }
+
+        @Override
+        public int getItemCount() {
+            return children.size();
+        }
+
+        static class ChildViewHolder extends RecyclerView.ViewHolder {
+
+            private final ImageView imgAvatar;
+            private final android.widget.TextView tvName;
+
+            ChildViewHolder(@NonNull android.view.View itemView) {
+                super(itemView);
+                imgAvatar = itemView.findViewById(R.id.imgChildAvatar);
+                tvName = itemView.findViewById(R.id.tvChildName);
+            }
+
+            void bind(ChildProfile child, OnChildClickListener listener) {
+                tvName.setText(child.getName());
+                int avatarResId = child.resolveAvatarResId(itemView.getContext());
+                imgAvatar.setImageResource(avatarResId);
+
+                itemView.setOnClickListener(v -> listener.onChildClick(child));
+            }
+        }
     }
 }

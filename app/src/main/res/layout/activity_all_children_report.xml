@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Background -->
+    <ImageView
+        android:id="@+id/bgImage"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:src="@drawable/bluestar_background"
+        android:scaleType="centerCrop"
+        android:contentDescription="@string/background"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/tvTitleAllReports"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="All children reports"
+        android:textColor="@android:color/black"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:padding="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Card with table and legend -->
+    <LinearLayout
+        android:id="@+id/layoutReportCardAll"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#CCFFFFFF"
+        android:elevation="4dp"
+        app:layout_constraintTop_toBottomOf="@id/tvTitleAllReports"
+        app:layout_constraintBottom_toTopOf="@id/layoutActionsRowAll"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp">
+
+        <!-- Scrollable table -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:id="@+id/layoutTablesContainerAll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvTablesPlaceholderAll"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="All children summary will appear here."
+                    android:textSize="13sp"
+                    android:textColor="@android:color/black"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp" />
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- Legend at bottom of card -->
+        <TextView
+            android:id="@+id/tvLegendAll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Progress shows completion across all BrightBuds modules. Stars show overall rewards earned by each child."
+            android:textSize="11sp"
+            android:textColor="@android:color/black"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp" />
+    </LinearLayout>
+
+    <!-- Row with Download PDF + Email PDF above footer -->
+    <LinearLayout
+        android:id="@+id/layoutActionsRowAll"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        app:layout_constraintBottom_toTopOf="@id/footerRow"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Download PDF (icon + text) -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_weight="1">
+
+            <ImageButton
+                android:id="@+id/btnDownloadAllPdf"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@android:color/transparent"
+                android:padding="0dp"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:cropToPadding="false"
+                android:src="@drawable/pdf_icon"
+                android:tint="@null"
+                android:contentDescription="Download PDF for all children" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Download PDF"
+                android:textSize="14sp"
+                android:textColor="@android:color/black" />
+        </LinearLayout>
+
+        <!-- Email PDF (button with email_icon) -->
+        <Button
+            android:id="@+id/btnEmailAllPdf"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="Email PDF"
+            android:textColor="@android:color/black"
+            android:padding="8dp" />
+    </LinearLayout>
+
+    <!-- Footer with close (left) and home (right) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/footerRow"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Close pinned LEFT -->
+        <ImageButton
+            android:id="@+id/btnClose"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginStart="8dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="Close"
+            android:padding="0dp"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
+            android:cropToPadding="false"
+            android:src="@drawable/close_icon"
+            android:tint="@null"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <!-- Home pinned RIGHT -->
+        <ImageButton
+            android:id="@+id/btnHome"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginEnd="8dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="Home"
+            android:padding="0dp"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
+            android:cropToPadding="false"
+            android:src="@drawable/home_icon"
+            android:tint="@null"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

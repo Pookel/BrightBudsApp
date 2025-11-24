@@ -1,116 +1,218 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_soft_gradient"
-    android:padding="24dp">
+    android:background="@drawable/bluestar_background">
 
-    <LinearLayout
+    <!-- Bubble overlay -->
+    <ImageView
+        android:id="@+id/imgBubblesLanding"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        android:src="@drawable/bubbles_layer"
+        android:alpha="0.35"
+        android:scaleType="centerCrop"
+        android:contentDescription="@null" />
+
+    <!-- Main content -->
+    <LinearLayout
+        android:id="@+id/landingRoot"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:orientation="vertical"
-        android:gravity="center_horizontal">
+        android:padding="16dp">
 
-        <!-- Logo -->
-        <ImageView
-            android:layout_width="130dp"
-            android:layout_height="130dp"
-            android:src="@drawable/ic_brightbuds_logo"
-            android:contentDescription="BrightBuds Logo"
-            android:layout_marginTop="32dp" />
+        <!-- Top bar with centered logo and settings on the right -->
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="BrightBuds"
-            android:textColor="@color/primary"
-            android:textSize="32sp"
-            android:textStyle="bold"
-            android:layout_marginTop="12dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Learning made fun for little minds!"
-            android:textColor="@color/text_secondary"
-            android:textSize="16sp"
-            android:layout_marginTop="6dp"
-            android:gravity="center" />
-
-        <!-- Demo Section -->
-        <TextView
-            android:id="@+id/txtFreeModules"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🎁 Try these free learning videos!"
-            android:textColor="@color/text_primary"
-            android:textStyle="bold"
-            android:textSize="18sp"
-            android:gravity="center"
-            android:layout_marginTop="36dp"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Cute Demo Tiles -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
+        <RelativeLayout
+            android:layout_width="364dp"
+            android:layout_height="110dp"
+            android:paddingBottom="4dp">
 
             <ImageView
-                android:id="@+id/imgAbcSong"
-                android:layout_width="130dp"
-                android:layout_height="130dp"
-                android:layout_margin="10dp"
-                android:src="@drawable/ic_music"
-                android:contentDescription="ABC Song"
-                android:padding="0dp"
-                android:scaleType="fitCenter" />
+                android:id="@+id/imgMiniLogo"
+                android:layout_width="110dp"
+                android:layout_height="110dp"
+                android:layout_centerHorizontal="true"
+                android:src="@drawable/ic_brightbuds_logo"
+                android:contentDescription="BrightBuds logo" />
 
-            <ImageView
-                android:id="@+id/img123Song"
-                android:layout_width="130dp"
-                android:layout_height="130dp"
-                android:layout_margin="10dp"
-                android:src="@drawable/ic_numbers"
-                android:contentDescription="123 Song"
-                android:padding="0dp"
-                android:scaleType="fitCenter" />
-        </LinearLayout>
+        </RelativeLayout>
 
-        <!-- CTA Buttons -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSignIn"
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Parent Sign In"
-            android:backgroundTint="@color/primary"
-            android:textColor="@color/white"
-            app:cornerRadius="16dp"
-            android:layout_marginTop="40dp"
-            android:padding="14dp" />
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="8dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRegister"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Create Account"
-            android:backgroundTint="@color/white"
-            android:textColor="@color/primary"
-            app:strokeColor="@color/primary"
-            app:strokeWidth="2dp"
-            app:cornerRadius="16dp"
-            android:layout_marginTop="12dp"
-            android:padding="14dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Unlock all modules by registering!"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp"
-            android:layout_marginTop="8dp"
-            android:gravity="center" />
+                <!-- SONG MODULES (UNLOCKED) -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Songs"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:fontFamily="casual"
+                    android:textColor="@android:color/holo_blue_dark"
+                    android:layout_marginTop="12dp" />
+
+                <!-- GAMES (LOCKED) -->
+
+                <LinearLayout
+                    android:layout_width="337dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btnABCSong"
+                        android:layout_width="105dp"
+                        android:layout_height="140dp"
+                        android:adjustViewBounds="true"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="ABC Song"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_abc_music" />
+
+                    <ImageButton
+                        android:id="@+id/btn123Song"
+                        android:layout_width="103dp"
+                        android:layout_height="140dp"
+                        android:layout_marginStart="16dp"
+                        android:adjustViewBounds="true"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="Number Song"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_numbers" />
+
+                    <ImageButton
+                        android:id="@+id/btnShapesSong"
+                        android:layout_width="91dp"
+                        android:layout_height="140dp"
+                        android:layout_marginStart="16dp"
+                        android:adjustViewBounds="true"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="Shapes Song"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_shapes" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Games"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:fontFamily="casual"
+                    android:textColor="@android:color/holo_blue_dark"
+                    android:layout_marginTop="20dp" />
+
+                <!-- Row 1 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="4dp">
+
+                    <ImageButton
+                        android:id="@+id/btnMatchLetter"
+                        android:layout_width="110dp"
+                        android:layout_height="140dp"
+                        android:adjustViewBounds="true"
+                        android:alpha="0.4"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="Match the Letter"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_match" />
+
+                    <ImageButton
+                        android:id="@+id/btnFeedMonster"
+                        android:layout_width="104dp"
+                        android:layout_height="140dp"
+                        android:layout_marginStart="16dp"
+                        android:adjustViewBounds="true"
+                        android:alpha="0.4"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="Feed the Monster"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_monster" />
+
+                    <ImageButton
+                        android:id="@+id/btnMemoryMatch"
+                        android:layout_width="105dp"
+                        android:layout_height="140dp"
+                        android:layout_marginStart="16dp"
+                        android:adjustViewBounds="true"
+                        android:alpha="0.4"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="Memory Match"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_memory" />
+                </LinearLayout>
+
+                <!-- Row 2 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="121dp"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btnWordBuilder"
+                        android:layout_width="140dp"
+                        android:layout_height="140dp"
+                        android:adjustViewBounds="true"
+                        android:alpha="0.4"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="Word Builder"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_word_builder" />
+
+                    <ImageButton
+                        android:id="@+id/btnFamilyGallery"
+                        android:layout_width="140dp"
+                        android:layout_height="140dp"
+                        android:layout_marginStart="16dp"
+                        android:adjustViewBounds="true"
+                        android:alpha="0.4"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="Family Gallery"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_my_family" />
+
+                </LinearLayout>
+
+                <!-- Hint text under icons -->
+                <TextView
+                    android:id="@+id/tvLockedHint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sign in or Register"
+                    android:textColor="@android:color/holo_blue_dark"
+                    android:fontFamily="casual"
+                    android:textSize="14sp"
+                    android:layout_marginTop="16dp"
+                    android:layout_gravity="center_horizontal" />
+
+            </LinearLayout>
+        </ScrollView>
+
     </LinearLayout>
-</ScrollView>
+
+</FrameLayout>

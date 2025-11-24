@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/feedbackRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Background image -->
+    <ImageView
+        android:id="@+id/bgImage"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:src="@drawable/bluestar_background"
+        android:scaleType="centerCrop"
+        android:contentDescription="Background"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/txtFeedbackTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Give Feedback"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/holo_blue_dark"
+        android:paddingTop="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Small helper line -->
+    <TextView
+        android:id="@+id/txtFeedbackSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tell us what you love or what we can improve."
+        android:textSize="14sp"
+        android:textColor="@android:color/holo_blue_dark"
+        android:paddingTop="4dp"
+        app:layout_constraintTop_toBottomOf="@id/txtFeedbackTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Content area -->
+    <LinearLayout
+        android:id="@+id/layoutContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#80212121"
+        android:elevation="2dp"
+        android:layout_margin="16dp"
+        app:layout_constraintTop_toBottomOf="@id/txtFeedbackSubtitle"
+        app:layout_constraintBottom_toTopOf="@+id/bottomBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Subject -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Subject"
+            android:textColor="@android:color/white"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/edtFeedbackSubject"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Short title for your feedback"
+            android:maxLines="1"
+            android:inputType="textCapSentences"
+            android:background="@android:color/white"
+            android:padding="8dp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Message -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Message"
+            android:textColor="@android:color/white"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/edtFeedbackMessage"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:hint="Please share your feedback"
+            android:gravity="top|start"
+            android:inputType="textMultiLine"
+            android:background="@android:color/white"
+            android:padding="8dp"
+            android:maxLength="500"
+            android:overScrollMode="always" />
+
+        <!-- Character count -->
+        <TextView
+            android:id="@+id/txtCharCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0/500"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:layout_gravity="end"
+            android:paddingTop="4dp" />
+
+        <!-- Rating row on white background -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:background="@android:color/white"
+            android:padding="8dp">
+
+            <TextView
+                android:layout_width="57dp"
+                android:layout_height="wrap_content"
+                android:text="Rating"
+                android:textColor="@color/primary"
+                android:textSize="14sp" />
+
+            <RatingBar
+                android:id="@+id/ratingFeedback"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:numStars="5"
+                android:stepSize="1" />
+        </LinearLayout>
+
+
+        <!-- Send button: large icon with label underneath -->
+        <LinearLayout
+            android:id="@+id/layoutSend"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="16dp">
+
+            <ImageView
+                android:id="@+id/btnSendFeedback"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:src="@drawable/button_feedback"
+                android:contentDescription="Send feedback" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Send feedback"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Bottom bar holding home and close icons -->
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="0dp"
+        android:layout_height="72dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:gravity="center_vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Close icon bottom left -->
+        <ImageView
+            android:id="@+id/btnCloseIcon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@drawable/close_icon"
+            android:background="@null"
+            android:padding="0dp" />
+
+        <!-- Spacer -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <!-- Home icon bottom right -->
+        <ImageView
+            android:id="@+id/btnHomeIcon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@drawable/home_icon"
+            android:background="@null"
+            android:padding="0dp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

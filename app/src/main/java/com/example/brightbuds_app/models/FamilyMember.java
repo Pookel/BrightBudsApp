@@ -1,82 +1,78 @@
 package com.example.brightbuds_app.models;
 
 /**
- * FamilyMember model
- * -------------------
- * Represents a single family member entry in the "My Family" module.
- *
- * ✅ November 2025 Update:
- *  - Supports local-only storage via `localPath`.
- *  - Retains backward compatibility with older Firestore documents (imageUrl).
- *  - Fully documented for maintainability.
+ * Represents one person in the family tree.
+ * These records are shared by all children of the same parent.
  */
-
 public class FamilyMember {
 
-    private String name;
+    // Local primary key in SQLite.
+    private long familyId;
+
+    // Local foreign key that links this family member to a parent.
+    private long parentId;
+
+    // First name that will be shown on the family card and in the game.
+    private String firstName;
+
+    // Relationship text such as "Mom", "Grandpa" or "Sister".
     private String relationship;
-    private String imageUrl;
-    private String localPath;
-    private String parentId;
-    private long createdAt;
 
+    // File system path of the family member photo.
+    private String imagePath;
 
-    // Empty constructor for Firestore deserialization
-    public FamilyMember() {}
-
-    /**
-     * Constructor for default members (uses built-in drawable resources)
-     * Note: These entries are placeholders with no localPath.
-     */
-    public FamilyMember(String name, String relationship, int imageResource, String imageUrl) {
-        this.name = name;
-        this.relationship = relationship;
-        this.imageUrl = imageUrl;
-        this.localPath = null;
+    public FamilyMember() {
     }
 
-    /**
-     * Constructor for locally stored members.
-     * @param name         The family member’s name.
-     * @param relationship Their relationship (e.g., "father", "sibling").
-     * @param localPath    Absolute path to the local image on device.
-     */
-    public FamilyMember(String name, String relationship, String localPath) {
-        this.name = name;
+    public FamilyMember(long familyId,
+                        long parentId,
+                        String firstName,
+                        String relationship,
+                        String imagePath) {
+        this.familyId = familyId;
+        this.parentId = parentId;
+        this.firstName = firstName;
         this.relationship = relationship;
-        this.localPath = localPath;
+        this.imagePath = imagePath;
     }
 
-    // Getters & Setters
+    public long getFamilyId() {
+        return familyId;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setFamilyId(long familyId) {
+        this.familyId = familyId;
+    }
 
-    public String getRelationship() { return relationship; }
-    public void setRelationship(String relationship) { this.relationship = relationship; }
+    public long getParentId() {
+        return parentId;
+    }
 
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public void setParentId(long parentId) {
+        this.parentId = parentId;
+    }
 
-    public String getLocalPath() { return localPath; }
-    public void setLocalPath(String localPath) { this.localPath = localPath; }
+    public String getFirstName() {
+        return firstName;
+    }
 
-    public String getParentId() { return parentId; }
-    public void setParentId(String parentId) { this.parentId = parentId; }
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
 
-    public long getCreatedAt() { return createdAt; }
-    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
+    public String getRelationship() {
+        return relationship;
+    }
 
-    // Utility
+    public void setRelationship(String relationship) {
+        this.relationship = relationship;
+    }
 
-    @Override
-    public String toString() {
-        return "FamilyMember{" +
-                "name='" + name + '\'' +
-                ", relationship='" + relationship + '\'' +
-                ", localPath='" + localPath + '\'' +
-                ", parentId='" + parentId + '\'' +
-                ", createdAt=" + createdAt +
-                '}';
+    public String getImagePath() {
+        return imagePath;
+    }
+
+    public void setImagePath(String imagePath) {
+        this.imagePath = imagePath;
     }
 }

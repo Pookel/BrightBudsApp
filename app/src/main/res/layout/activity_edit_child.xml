@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".activities.EditChildActivity">
+
+    <!-- Background image -->
+    <ImageView
+        android:id="@+id/bgImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/animal_background"
+        android:contentDescription="Background" />
+
+    <!-- Main content in a card-like panel -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="80dp"
+        app:cardCornerRadius="24dp"
+        app:cardUseCompatPadding="true"
+        android:foregroundGravity="center"
+        android:backgroundTint="#CCFFFFFF"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Title -->
+                <TextView
+                    android:id="@+id/textTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Add Child Profile"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="#043B49"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Subtitle -->
+                <TextView
+                    android:id="@+id/textSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Fill in your child's details"
+                    android:textSize="14sp"
+                    android:textColor="#555555"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Name row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="4dp">
+
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/button_name"
+                        android:contentDescription="Name icon"
+                        android:layout_marginEnd="8dp" />
+
+                    <EditText
+                        android:id="@+id/editTextChildName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Child's first name"
+                        android:inputType="textPersonName"
+                        android:maxLines="1" />
+                </LinearLayout>
+
+                <!-- Age row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp">
+
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/button_age"
+                        android:contentDescription="Age icon"
+                        android:layout_marginEnd="8dp" />
+
+                    <EditText
+                        android:id="@+id/editTextChildAge"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Age (1 to 10)"
+                        android:inputType="number"
+                        android:maxLines="1" />
+                </LinearLayout>
+
+                <!-- Gender row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp">
+
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/button_gender"
+                        android:contentDescription="Gender icon"
+                        android:layout_marginEnd="8dp" />
+
+                    <AutoCompleteTextView
+                        android:id="@+id/spinnerGender"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Select gender"
+                        android:inputType="none"
+                        android:focusable="false"
+                        android:clickable="true"
+                        android:cursorVisible="false"
+                        android:maxLines="1" />
+                </LinearLayout>
+
+                <!-- Level row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="12dp">
+
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/button_level"
+                        android:contentDescription="Level icon"
+                        android:layout_marginEnd="8dp" />
+
+                    <AutoCompleteTextView
+                        android:id="@+id/spinnerLearningLevel"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Learning level"
+                        android:inputType="none"
+                        android:focusable="false"
+                        android:clickable="true"
+                        android:cursorVisible="false"
+                        android:maxLines="1" />
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="16dp"
+                    android:background="#DDDDDD" />
+
+                <!-- Custom words title -->
+                <TextView
+                    android:id="@+id/textWordsTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Learn to Spell Words"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#043B49"
+                    android:layout_marginTop="12dp" />
+
+                <TextView
+                    android:id="@+id/textWordsHint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Add four words (max 8 letters each)"
+                    android:textSize="13sp"
+                    android:textColor="#666666"
+                    android:layout_marginBottom="4dp" />
+
+                <!-- Words grid: 2 x 2 -->
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="2"
+                    android:rowCount="2"
+                    android:layout_marginTop="4dp"
+                    android:columnOrderPreserved="false">
+
+                    <EditText
+                        android:id="@+id/editTextWord1"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="4dp"
+                        android:layout_columnWeight="1"
+                        android:hint="Word 1"
+                        android:maxLength="8"
+                        android:inputType="textCapCharacters" />
+
+                    <EditText
+                        android:id="@+id/editTextWord2"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="4dp"
+                        android:layout_columnWeight="1"
+                        android:hint="Word 2"
+                        android:maxLength="8"
+                        android:inputType="textCapCharacters" />
+
+                    <EditText
+                        android:id="@+id/editTextWord3"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="4dp"
+                        android:layout_columnWeight="1"
+                        android:hint="Word 3"
+                        android:maxLength="8"
+                        android:inputType="textCapCharacters" />
+
+                    <EditText
+                        android:id="@+id/editTextWord4"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="4dp"
+                        android:layout_columnWeight="1"
+                        android:hint="Word 4"
+                        android:maxLength="8"
+                        android:inputType="textCapCharacters" />
+                </GridLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="16dp"
+                    android:background="#DDDDDD" />
+
+                <!-- Avatar selection title -->
+                <TextView
+                    android:id="@+id/textAvatarTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Choose an avatar"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#043B49"
+                    android:layout_marginTop="12dp" />
+
+                <TextView
+                    android:id="@+id/textAvatarHint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pick a fun picture"
+                    android:textSize="13sp"
+                    android:textColor="#666666"
+                    android:layout_marginBottom="4dp" />
+
+                <!-- Avatar grid: 2 rows of 3 visible -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerAvatars"
+                    android:layout_width="match_parent"
+                    android:layout_height="240dp"
+                    android:layout_marginTop="8dp"
+                    android:nestedScrollingEnabled="false"
+                    android:overScrollMode="never" />
+
+
+                <!-- Save button -->
+                <Button
+                    android:id="@+id/buttonSaveChild"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Save Child Profile"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp" />
+            </LinearLayout>
+        </ScrollView>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Close icon bottom left -->
+    <ImageView
+        android:id="@+id/btnCloseIcon"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginBottom="24dp"
+        android:src="@drawable/close_icon"
+        android:contentDescription="Close"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Home icon bottom right -->
+    <ImageView
+        android:id="@+id/btnHomeIcon"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginEnd="24dp"
+        android:layout_marginBottom="24dp"
+        android:src="@drawable/home_icon"
+        android:contentDescription="Home"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

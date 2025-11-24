@@ -28,18 +28,21 @@ public class ProgressService {
     private final FirebaseFirestore db;
     private final DatabaseHelper localDb;
 
+    // Analytics sync bridge
+    private final FirebaseSyncService firebaseSync;
+
     public ProgressService(Context context) {
         this.db = FirebaseFirestore.getInstance();
         this.localDb = new DatabaseHelper(context);
+        this.firebaseSync = new FirebaseSyncService();
     }
-
 
     // FETCH PROGRESS
     public void getAllProgressForParentWithChildren(String parentId,
                                                     List<String> childIds,
                                                     ProgressListCallback callback) {
         if (childIds == null || childIds.isEmpty()) {
-            Log.w(TAG, "⚠️ No child IDs for parent: " + parentId);
+            Log.w(TAG, "No child IDs for parent: " + parentId);
             callback.onSuccess(new ArrayList<>());
             return;
         }
@@ -57,7 +60,7 @@ public class ProgressService {
                             p.setProgressId(doc.getId());
                             result.add(p);
                             foundChildIds.add(p.getChildId());
-                            // from server → mark as synced locally
+                            // from server -> mark as synced locally
                             cacheProgressLocally(p, true);
                         }
                     }
@@ -66,7 +69,7 @@ public class ProgressService {
                     callback.onSuccess(result);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "❌ Firestore fetch failed", e);
+                    Log.e(TAG, "Firestore fetch failed", e);
                     callback.onFailure(e);
                 });
     }
@@ -78,7 +81,7 @@ public class ProgressService {
                                     int score,
                                     DataCallbacks.GenericCallback callback) {
 
-        Log.d(TAG, "🎯 markModuleCompleted child=" + childId +
+        Log.d(TAG, "markModuleCompleted child=" + childId +
                 " module=" + moduleId + " score=" + score);
 
         var user = FirebaseAuth.getInstance().getCurrentUser();
@@ -93,23 +96,28 @@ public class ProgressService {
         db.collection("child_progress")
                 .add(data)
                 .addOnSuccessListener(docRef -> {
-                    Log.i(TAG, "✅ Progress saved online: " + docRef.getId());
+                    Log.i(TAG, "Progress saved online: " + docRef.getId());
                     cacheProgressRecord(docRef.getId(), parentId, childId, moduleId,
-                            score, "completed", true);
+                            score, "completed", 0L, true);
                     updateChildProgressStats(childId);
+                    // Optionally analytics, but this is usually a simple completion
                     callback.onSuccess("Progress saved!");
                 })
                 .addOnFailureListener(e ->
                         handleProgressSaveFailure(e, parentId, childId, moduleId, score, callback));
     }
 
-
-    // VIDEO PLAY
+    // VIDEO PLAY  - full metrics for songs
     public void logVideoPlay(String childId,
                              String moduleId,
+                             int score,
+                             long timeSpentMs,
+                             int stars,
+                             int completedFlag,
+                             int plays,
                              DataCallbacks.GenericCallback callback) {
 
-        Log.d(TAG, "🎥 logVideoPlay child=" + childId + " module=" + moduleId);
+        Log.d(TAG, "logVideoPlay child=" + childId + " module=" + moduleId);
 
         var user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
@@ -128,33 +136,54 @@ public class ProgressService {
         data.put("parentId", parentId);
         data.put("childId", childId);
         data.put("moduleId", moduleId);
-        data.put("type", "video");
-        data.put("status", "completed");
-        data.put("completionStatus", true);
+        data.put("type", "song");
+        data.put("status", completedFlag == 1 ? "completed" : "in_progress");
+        data.put("completionStatus", completedFlag == 1);
         data.put("timestamp", System.currentTimeMillis());
         data.put("lastUpdated", System.currentTimeMillis());
-        data.put("score", 100);
-        data.put("plays", FieldValue.increment(1));
+        data.put("score", score);
+        data.put("timeSpent", Math.max(0L, timeSpentMs));
+        data.put("stars", Math.max(0, stars));
+        data.put("plays", FieldValue.increment(Math.max(1, plays)));
 
         db.collection("child_progress")
                 .document(docId)
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener(unused -> {
-                    Log.i(TAG, "✅ Video play logged online: " + docId);
-                    cacheProgressRecord(docId, parentId, childId, moduleId,
-                            100, "video_played", true);
+                    Log.i(TAG, "Video play logged online: " + docId);
+                    cacheProgressRecord(
+                            docId,
+                            parentId,
+                            childId,
+                            moduleId,
+                            score,
+                            (completedFlag == 1 ? "completed" : "in_progress"),
+                            timeSpentMs,
+                            true
+                    );
                     updateChildProgressStats(childId);
+                    // NEW: sync analytics for this child+module
+                    syncAnalyticsToFirebase(childId, moduleId);
                     callback.onSuccess("Video play recorded");
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "❌ Failed to log video play online, caching", e);
-                    cacheProgressRecord(docId, parentId, childId, moduleId,
-                            100, "video_played", false);
+                    Log.e(TAG, "Failed to log video play online, caching", e);
+                    cacheProgressRecord(
+                            docId,
+                            parentId,
+                            childId,
+                            moduleId,
+                            score,
+                            (completedFlag == 1 ? "completed" : "in_progress"),
+                            timeSpentMs,
+                            false
+                    );
                     callback.onSuccess("Saved locally (offline mode)");
                 });
     }
 
-    // SET COMPLETION %
+    // SET COMPLETION PERCENTAGE
+
     public void setCompletionPercentage(String parentId,
                                         String childId,
                                         String moduleId,
@@ -177,6 +206,7 @@ public class ProgressService {
     }
 
     // INTERNAL HELPERS
+
     private Map<String, Object> createProgressData(String parentId,
                                                    String childId,
                                                    String moduleId,
@@ -208,12 +238,14 @@ public class ProgressService {
         );
     }
 
+    // helper that allows callers to pass timeSpent
     private void cacheProgressRecord(String id,
                                      String parentId,
                                      String childId,
                                      String moduleId,
                                      int score,
                                      String status,
+                                     long timeSpent,
                                      boolean isSynced) {
         localDb.insertOrUpdateProgress(
                 id,
@@ -223,9 +255,20 @@ public class ProgressService {
                 score,
                 status,
                 System.currentTimeMillis(),
-                0L,
+                timeSpent,
                 isSynced
         );
+    }
+
+    // legacy helper where timeSpent is unknown (kept for existing calls)
+    private void cacheProgressRecord(String id,
+                                     String parentId,
+                                     String childId,
+                                     String moduleId,
+                                     int score,
+                                     String status,
+                                     boolean isSynced) {
+        cacheProgressRecord(id, parentId, childId, moduleId, score, status, 0L, isSynced);
     }
 
     private void handleProgressSaveFailure(Exception e,
@@ -235,17 +278,17 @@ public class ProgressService {
                                            int score,
                                            DataCallbacks.GenericCallback callback) {
 
-        Log.e(TAG, "❌ Firestore unavailable, caching offline", e);
+        Log.e(TAG, "Firestore unavailable, caching offline", e);
         String localId = "offline_" + System.currentTimeMillis();
         cacheProgressRecord(localId, parentId, childId, moduleId,
-                score, "completed", false);
+                score, "completed", 0L, false);
         callback.onSuccess("Saved locally (offline mode)");
     }
 
     private void validateChildProgressConsistency(List<String> expected, Set<String> found) {
         for (String id : expected) {
             if (!found.contains(id)) {
-                Log.w(TAG, "⚠️ No progress found for child: " + id);
+                Log.w(TAG, "No progress found for child: " + id);
             }
         }
     }
@@ -270,25 +313,25 @@ public class ProgressService {
                         "timestamp", System.currentTimeMillis()
                 )
                 .addOnSuccessListener(unused -> {
-                    Log.i(TAG, "✅ Updated progress online: " + docId);
+                    Log.i(TAG, "Updated progress online: " + docId);
                     if (childId != null && parentId != null && moduleId != null) {
                         cacheProgressRecord(docId, parentId, childId, moduleId,
-                                percentage, status, true);
+                                percentage, status, 0L, true);
                         updateChildProgressStats(childId);
                     }
                     callback.onSuccess("Progress updated!");
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "❌ Failed to update online, caching", e);
+                    Log.e(TAG, "Failed to update online, caching", e);
                     if (childId != null && parentId != null && moduleId != null) {
                         cacheProgressRecord(docId, parentId, childId, moduleId,
-                                percentage, status, false);
+                                percentage, status, 0L, false);
                     }
                     callback.onFailure(e);
                 });
     }
 
-    /** Recalculate child-level progress & stars from child_progress */
+    /** Recalculate child level progress and stars from child_progress */
     private void updateChildProgressStats(String childId) {
         db.collection("child_progress")
                 .whereEqualTo("childId", childId)
@@ -314,20 +357,81 @@ public class ProgressService {
                     int progressPercent = (int) Math.round(Math.min(1.0, ratio) * 100.0);
                     int stars = (int) Math.round(Math.min(1.0, ratio) * 5.0);
 
-                    Log.d(TAG, "🌟 Stats child=" + childId +
+                    Log.d(TAG, "Stats child=" + childId +
                             " completed=" + completedModules +
                             " progress=" + progressPercent +
-                            "% stars=" + stars);
+                            " stars=" + stars);
 
                     db.collection("child_profiles").document(childId)
                             .update("progress", progressPercent, "stars", stars)
                             .addOnSuccessListener(unused ->
-                                    Log.i(TAG, "✅ Child profile updated"))
+                                    Log.i(TAG, "Child profile updated"))
                             .addOnFailureListener(e ->
-                                    Log.e(TAG, "❌ Failed to update child profile", e));
+                                    Log.e(TAG, "Failed to update child profile", e));
                 })
                 .addOnFailureListener(e ->
-                        Log.e(TAG, "❌ Failed to fetch child progress", e));
+                        Log.e(TAG, "Failed to fetch child progress", e));
+    }
+
+    /**
+     * Aggregate analytics for one child+module from child_progress
+     * and push into child_analytics via FirebaseSyncService.
+     */
+    private void syncAnalyticsToFirebase(String childId, String moduleId) {
+        db.collection("child_progress")
+                .whereEqualTo("childId", childId)
+                .whereEqualTo("moduleId", moduleId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot.isEmpty()) {
+                        Log.w(TAG, "No progress docs for analytics: child=" + childId +
+                                " module=" + moduleId);
+                        return;
+                    }
+
+                    int sessionCount = snapshot.size();
+                    int totalScore = 0;
+                    int totalCorrect = 0;
+                    int totalAttempts = 0;
+                    long totalTimeMs = 0L;
+
+                    for (DocumentSnapshot doc : snapshot) {
+                        Long score = doc.getLong("score");
+                        Long correct = doc.getLong("correct");
+                        Long incorrect = doc.getLong("incorrect");
+                        Long timeSpent = doc.getLong("timeSpent");
+
+                        if (score != null) {
+                            totalScore += score.intValue();
+                        }
+                        if (correct != null) {
+                            totalCorrect += correct.intValue();
+                        }
+                        if (correct != null || incorrect != null) {
+                            int c = correct != null ? correct.intValue() : 0;
+                            int ic = incorrect != null ? incorrect.intValue() : 0;
+                            totalAttempts += c + ic;
+                        }
+                        if (timeSpent != null) {
+                            totalTimeMs += timeSpent;
+                        }
+                    }
+
+                    firebaseSync.upsertChildAnalytics(
+                            childId,
+                            moduleId,
+                            sessionCount,
+                            totalScore,
+                            totalCorrect,
+                            totalAttempts,
+                            totalTimeMs
+                    );
+
+                    Log.d(TAG, "Analytics synced for child=" + childId +
+                            " module=" + moduleId);
+                })
+                .addOnFailureListener(e ->
+                        Log.e(TAG, "Failed to load progress for analytics", e));
     }
 
     // Analytics helper
@@ -338,25 +442,23 @@ public class ProgressService {
         return total / list.size();
     }
 
-    // Legacy no-arg
+    // Legacy no arg
     public void logVideoPlay() {
-        Log.d(TAG, "⚠️ Deprecated logVideoPlay() called with no parameters.");
+        Log.d(TAG, "Deprecated logVideoPlay() called with no parameters.");
     }
 
     public void autoSyncOfflineProgress() {
     }
 
     /*
- Records a game session for any game module with detailed metrics.
- Writes to Firestore using merge to preserve history and supports offline cache.
- Also inserts or updates a local SQLite row so the dashboard can reflect progress instantly.
+     Records a game session for any game module with detailed metrics.
+     Writes to Firestore using merge and supports offline cache.
+     Also inserts or updates a local SQLite row so the dashboard can reflect progress instantly.
 
- Fields saved online:
-   parentId, childId, moduleId, type="game", score, status, completionStatus,
-   timestamp, timeSpent, plays, correct, incorrect, stars, lastUpdated
-
- Local cache uses DatabaseHelper.insertOrUpdateProgress to store a minimal row with timeSpent.
-*/
+     Fields saved online:
+       parentId, childId, moduleId, type="game", score, status, completionStatus,
+       timestamp, timeSpent, plays, correct, incorrect, stars, lastUpdated
+    */
     public void recordGameSession(String childId,
                                   String moduleId,
                                   int score,
@@ -396,26 +498,101 @@ public class ProgressService {
         data.put("incorrect", Math.max(0, incorrect));
         data.put("stars", Math.max(0, stars));
 
-        // Online write with merge to keep cumulative counters
         db.collection("child_progress")
                 .document(docId)
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener(unused -> {
-                    // Local cache update for offline-first dashboard
                     cacheProgressRecord(docId, parentId, childId, moduleId,
-                            score, (score >= 70 ? "completed" : "in_progress"), true);
-
-                    // Update child-level stats after progress write
+                            score,
+                            (score >= 70 ? "completed" : "in_progress"),
+                            timeSpentMs,
+                            true);
                     updateChildProgressStats(childId);
-
+                    // NEW: update analytics
+                    syncAnalyticsToFirebase(childId, moduleId);
                     callback.onSuccess("Game session recorded");
                 })
                 .addOnFailureListener(e -> {
-                    // Cache local if Firestore write fails
                     cacheProgressRecord(docId, parentId, childId, moduleId,
-                            score, (score >= 70 ? "completed" : "in_progress"), false);
+                            score,
+                            (score >= 70 ? "completed" : "in_progress"),
+                            timeSpentMs,
+                            false);
                     callback.onFailure(e);
                 });
     }
 
+    // Word Builder specific session recording with parent vs default stats.
+    public void recordWordBuilderSession(String childId,
+                                         String moduleId,
+                                         int score,
+                                         long timeSpentMs,
+                                         int stars,
+                                         int correct,
+                                         int incorrect,
+                                         int plays,
+                                         int parentCorrect,
+                                         int parentAttempts,
+                                         int defaultCorrect,
+                                         int defaultAttempts,
+                                         DataCallbacks.GenericCallback callback) {
+
+        var user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            callback.onFailure(new IllegalStateException("User not authenticated"));
+            return;
+        }
+        if (childId == null || moduleId == null) {
+            callback.onFailure(new IllegalArgumentException("Missing childId or moduleId"));
+            return;
+        }
+
+        final String parentId = user.getUid();
+        final String docId = childId + "_" + moduleId;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("parentId", parentId);
+        data.put("childId", childId);
+        data.put("moduleId", moduleId);
+        data.put("type", "game");
+        data.put("score", score);
+        data.put("status", score >= 70 ? "completed" : "in_progress");
+        data.put("completionStatus", score >= 70);
+        data.put("timestamp", System.currentTimeMillis());
+        data.put("lastUpdated", System.currentTimeMillis());
+        data.put("timeSpent", Math.max(0L, timeSpentMs));
+        data.put("plays", Math.max(1, plays));
+        data.put("correct", Math.max(0, correct));
+        data.put("incorrect", Math.max(0, incorrect));
+        data.put("stars", Math.max(0, stars));
+
+        // Parent vs default word summary for reports
+        data.put("wbParentCorrect", Math.max(0, parentCorrect));
+        data.put("wbParentAttempts", Math.max(0, parentAttempts));
+        data.put("wbDefaultCorrect", Math.max(0, defaultCorrect));
+        data.put("wbDefaultAttempts", Math.max(0, defaultAttempts));
+
+        db.collection("child_progress")
+                .document(docId)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener(unused -> {
+                    cacheProgressRecord(docId, parentId, childId, moduleId,
+                            score,
+                            (score >= 70 ? "completed" : "in_progress"),
+                            timeSpentMs,
+                            true);
+                    updateChildProgressStats(childId);
+                    // NEW: update analytics
+                    syncAnalyticsToFirebase(childId, moduleId);
+                    callback.onSuccess("Word Builder session recorded");
+                })
+                .addOnFailureListener(e -> {
+                    cacheProgressRecord(docId, parentId, childId, moduleId,
+                            score,
+                            (score >= 70 ? "completed" : "in_progress"),
+                            timeSpentMs,
+                            false);
+                    callback.onFailure(e);
+                });
+    }
 }

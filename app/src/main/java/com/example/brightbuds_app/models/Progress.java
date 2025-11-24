@@ -25,6 +25,12 @@ public class Progress {
 
     private Object lastUpdated;
 
+    // Word Builder specific summary fields for parent vs default words
+    private int wbParentCorrect;
+    private int wbParentAttempts;
+    private int wbDefaultCorrect;
+    private int wbDefaultAttempts;
+
     public Progress() {}
 
     @PropertyName("progressId")
@@ -110,6 +116,28 @@ public class Progress {
         return Constants.getModuleDisplayName(moduleId);
     }
 
+    // Word Builder - parent vs default fields
+
+    @PropertyName("wbParentCorrect")
+    public int getWbParentCorrect() { return wbParentCorrect; }
+    @PropertyName("wbParentCorrect")
+    public void setWbParentCorrect(int wbParentCorrect) { this.wbParentCorrect = wbParentCorrect; }
+
+    @PropertyName("wbParentAttempts")
+    public int getWbParentAttempts() { return wbParentAttempts; }
+    @PropertyName("wbParentAttempts")
+    public void setWbParentAttempts(int wbParentAttempts) { this.wbParentAttempts = wbParentAttempts; }
+
+    @PropertyName("wbDefaultCorrect")
+    public int getWbDefaultCorrect() { return wbDefaultCorrect; }
+    @PropertyName("wbDefaultCorrect")
+    public void setWbDefaultCorrect(int wbDefaultCorrect) { this.wbDefaultCorrect = wbDefaultCorrect; }
+
+    @PropertyName("wbDefaultAttempts")
+    public int getWbDefaultAttempts() { return wbDefaultAttempts; }
+    @PropertyName("wbDefaultAttempts")
+    public void setWbDefaultAttempts(int wbDefaultAttempts) { this.wbDefaultAttempts = wbDefaultAttempts; }
+
     @Override
     public String toString() {
         return "Progress{" +
@@ -119,6 +147,10 @@ public class Progress {
                 ", plays=" + plays +
                 ", score=" + score +
                 ", completed=" + isModuleCompleted() +
+                ", wbParentCorrect=" + wbParentCorrect +
+                ", wbParentAttempts=" + wbParentAttempts +
+                ", wbDefaultCorrect=" + wbDefaultCorrect +
+                ", wbDefaultAttempts=" + wbDefaultAttempts +
                 ", lastUpdated=" + lastUpdated +
                 '}';
     }

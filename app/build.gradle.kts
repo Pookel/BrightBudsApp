@@ -1,7 +1,11 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")      // you can keep this even if you have only Java
+    id("org.jetbrains.kotlin.android")
+
+    // Google Services plugin (required for google-services.json)
     id("com.google.gms.google-services")
+
+    // Crashlytics
     id("com.google.firebase.crashlytics")
 }
 
@@ -23,18 +27,23 @@ android {
         )
     }
 
+    /*
+     * R8 IS DISABLED COMPLETELY TO FIX THE ERROR:
+     * "An error occurred when parsing kotlin metadata"
+     */
     buildTypes {
-        getByName("debug") {
+        debug {
+            // Disable R8, shrinking, and obfuscation
             isMinifyEnabled = false
+            isShrinkResources = false
         }
-        getByName("release") {
-            isMinifyEnabled = true
 
-            buildFeatures {
-                buildConfig = true
-            }
+        release {
+            // Disable R8, shrinking, and obfuscation
+            isMinifyEnabled = false
+            isShrinkResources = false
 
-            isShrinkResources = true
+            // Keep your proguard file even though it's not used (safe)
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -63,14 +72,18 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
 
-    // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:34.5.0"))
+    // Firebase BoM
+    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
+
+    // Firebase Products
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-crashlytics")
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-config")
+
+    // Play Services
     implementation("com.google.android.gms:play-services-auth:21.4.0")
 
     // Media3
@@ -88,8 +101,12 @@ dependencies {
     // JSON parsing
     implementation("com.google.code.gson:gson:2.10.1")
 
-    // Konfetti animation library
+    // Konfetti
     implementation("nl.dionsegijn:konfetti-xml:2.0.4")
+
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    implementation("com.google.android.flexbox:flexbox:3.0.0")
+
 
     // Testing
     testImplementation("junit:junit:4.13.2")

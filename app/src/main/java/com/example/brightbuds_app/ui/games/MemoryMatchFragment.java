@@ -5,14 +5,15 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.media.MediaPlayer;
 import android.media.SoundPool;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemClock;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,11 +28,15 @@ import com.example.brightbuds_app.adapters.MemoryMatchAdapter;
 import com.example.brightbuds_app.interfaces.DataCallbacks;
 import com.example.brightbuds_app.models.MemoryCard;
 import com.example.brightbuds_app.services.ProgressService;
+import com.example.brightbuds_app.utils.AnalyticsSessionManager;
 import com.example.brightbuds_app.utils.Constants;
+import com.example.brightbuds_app.utils.CurrentChildManager;
+import com.example.brightbuds_app.utils.ModuleIds;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.OnCardClickListener {
 
@@ -48,10 +53,6 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
     private TextView tvAttempts;
     private TextView tvStars;
     private TextView tvTimer;
-
-    private View rewardOverlay;
-    private LinearLayout layoutStarRow;
-    private TextView tvRewardMessage;
 
     private MemoryMatchAdapter adapter;
     private final List<MemoryCard> cards = new ArrayList<>();
@@ -88,6 +89,13 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
     private ProgressService progressService;
     private String selectedChildId;
 
+    private TextToSpeech tts;
+
+    // Analytics
+    private AnalyticsSessionManager analyticsManager;
+    private String analyticsChildId;
+    private boolean analyticsSaved = false;
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -95,6 +103,8 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
         Context context = requireContext();
 
         progressService = new ProgressService(context);
+        analyticsChildId = CurrentChildManager.getCurrentChildId(context);
+
         SharedPreferences parentPrefs =
                 context.getSharedPreferences("BrightBudsPrefs", Context.MODE_PRIVATE);
         selectedChildId = parentPrefs.getString("selectedChildId", null);
@@ -127,30 +137,33 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
         tvStars = view.findViewById(R.id.tvMMStars);
         tvTimer = view.findViewById(R.id.tvMMTimer);
 
-        rewardOverlay = view.findViewById(R.id.rewardOverlay);
-        layoutStarRow = view.findViewById(R.id.layoutStarRow);
-        tvRewardMessage = view.findViewById(R.id.tvRewardMessage);
-
         recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
 
-        setupCards();
+        // Analytics session for Memory Match
+        analyticsManager = new AnalyticsSessionManager(
+                requireContext(),
+                analyticsChildId,
+                ModuleIds.MODULE_MEMORY_MATCH
+        );
+        analyticsManager.startSession();
+        analyticsSaved = false;
 
+        setupCards();
         initSounds();
         startBackgroundMusic();
+        initTextToSpeech();
 
         adapter = new MemoryMatchAdapter(cards, this, soundPool, flipSoundId);
         recyclerView.setAdapter(adapter);
 
-        sessionStartMs = System.currentTimeMillis();
+        sessionStartMs = SystemClock.elapsedRealtime();
         startTimer();
 
-        rewardOverlay.setOnClickListener(v -> {
-            rewardOverlay.setVisibility(View.GONE);
-            resetGame();
-        });
-
+        speakPrompt("Find the matching cards");
         updateHud();
     }
+
+    // region Setup
 
     private void setupCards() {
         int[] allImages = new int[]{
@@ -197,7 +210,6 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
 
     private void initSounds() {
         soundPool = new SoundPool.Builder().setMaxStreams(3).build();
-
         soundCorrectId = soundPool.load(getContext(), R.raw.memory_correct, 1);
         soundWrongId = soundPool.load(getContext(), R.raw.memory_wrong, 1);
         flipSoundId = soundPool.load(getContext(), R.raw.card_flip, 1);
@@ -216,13 +228,27 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
         }
     }
 
+    private void initTextToSpeech() {
+        tts = new TextToSpeech(requireContext(), status -> {
+            if (status == TextToSpeech.SUCCESS) {
+                tts.setLanguage(Locale.ENGLISH);
+                tts.setPitch(1.1f);
+                tts.setSpeechRate(0.95f);
+            }
+        });
+    }
+
+    // endregion
+
+    // region Timer
+
     private void startTimer() {
         timerRunning = true;
         timerRunnable = new Runnable() {
             @Override
             public void run() {
                 if (!timerRunning) return;
-                elapsedMs = System.currentTimeMillis() - sessionStartMs;
+                elapsedMs = SystemClock.elapsedRealtime() - sessionStartMs;
                 tvTimer.setText("Time: " + Constants.formatTime(elapsedMs));
                 timerHandler.postDelayed(this, Constants.ONE_SECOND_MS);
             }
@@ -234,6 +260,10 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
         timerRunning = false;
         timerHandler.removeCallbacksAndMessages(null);
     }
+
+    // endregion
+
+    // region Card click and matching
 
     @Override
     public void onCardClick(int position) {
@@ -277,11 +307,13 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
             starsEarned++;
             wrongStreak = 0;
             playCorrectSound();
+            speakPositive("Good match");
         } else {
             first.setFlipped(false);
             second.setFlipped(false);
             wrongStreak++;
             playWrongSound();
+            speakPrompt("Try again");
 
             if (wrongStreak >= 3) {
                 showHintForPair();
@@ -344,7 +376,6 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
             return;
         }
 
-        // Make final copies for use in the lambda
         final int f1 = firstIdx;
         final int f2 = secondIdx;
 
@@ -375,38 +406,19 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
         }, 1100);
     }
 
-
     private void onGameCompleted() {
         stopTimer();
-
         long time = elapsedMs;
 
         Toast.makeText(getContext(), "Great job. All pairs matched.", Toast.LENGTH_SHORT).show();
+        speakPositive("Great job");
 
         saveLocalStats(time);
-        showRewardOverlay();
-        saveSessionMetrics(time);
-    }
 
-    private void showRewardOverlay() {
-        layoutStarRow.removeAllViews();
+        // Mark analytics as completed and send to SQLite + Firestore
+        endAnalyticsSession(true);
 
-        int toShow = Math.max(1, starsEarned);
-        if (toShow > 5) toShow = 5;
-
-        for (int i = 0; i < toShow; i++) {
-            ImageView star = new ImageView(requireContext());
-            star.setImageResource(R.drawable.smiling_star);
-            LinearLayout.LayoutParams lp =
-                    new LinearLayout.LayoutParams(dp(40), dp(40));
-            lp.setMargins(dp(4), dp(4), dp(4), dp(4));
-            star.setLayoutParams(lp);
-            layoutStarRow.addView(star);
-            pulse(star);
-        }
-
-        tvRewardMessage.setText("You earned " + starsEarned + " stars");
-        rewardOverlay.setVisibility(View.VISIBLE);
+        new Handler().postDelayed(this::resetGame, 1200);
     }
 
     private void resetGame() {
@@ -424,12 +436,17 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
         setupCards();
         adapter.notifyDataSetChanged();
 
-        sessionStartMs = System.currentTimeMillis();
+        sessionStartMs = SystemClock.elapsedRealtime();
         elapsedMs = 0L;
         tvTimer.setText("Time: " + Constants.formatTime(0));
         startTimer();
+        speakPrompt("Find the matching cards");
         updateHud();
     }
+
+    // endregion
+
+    // region Stats and metrics
 
     private void saveLocalStats(long timeTaken) {
         SharedPreferences sp =
@@ -452,36 +469,15 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
                 .apply();
     }
 
-    private void saveSessionMetrics(long timeTakenMillis) {
-        if (selectedChildId == null) return;
-
-        int incorrect = attemptsCount - matchesFound;
-        int plays = Math.max(1, timesPlayed);
-
-        progressService.recordGameSession(
-                selectedChildId,
-                Constants.GAME_MEMORY_MATCH,
-                score,
-                timeTakenMillis,
-                starsEarned,
-                matchesFound,
-                incorrect,
-                plays,
-                new DataCallbacks.GenericCallback() {
-                    @Override
-                    public void onSuccess(String r) { }
-
-                    @Override
-                    public void onFailure(Exception e) { }
-                }
-        );
-    }
-
     private void updateHud() {
         tvScore.setText("Score: " + score);
         tvAttempts.setText("Attempts: " + attemptsCount);
         tvStars.setText("Stars: " + starsEarned);
     }
+
+    // endregion
+
+    // region Animations and helpers
 
     private void pulse(View v) {
         ObjectAnimator upX = ObjectAnimator.ofFloat(v, View.SCALE_X, 1f, 1.1f);
@@ -500,9 +496,93 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
         }, 180);
     }
 
-    private int dp(int value) {
-        float scale = getResources().getDisplayMetrics().density;
-        return (int) (value * scale + 0.5f);
+    // endregion
+
+    // region Text to speech
+
+    private void speakPrompt(String text) {
+        speakInternal(text, TextToSpeech.QUEUE_FLUSH);
+    }
+
+    private void speakPositive(String text) {
+        speakInternal(text, TextToSpeech.QUEUE_ADD);
+    }
+
+    private void speakInternal(String text, int queueMode) {
+        if (tts == null) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            tts.speak(text, queueMode, null, "memory_match_tts");
+        } else {
+            tts.speak(text, queueMode, null);
+        }
+    }
+
+    // endregion
+
+    // region Analytics and lifecycle
+
+    private void saveSessionSummaryToFirestore(long timeSpentMs, boolean completed) {
+        if (selectedChildId == null) return;
+
+        int totalAttempts = attemptsCount;              // how many pair attempts
+        int totalCorrect = matchesFound;                // how many correct pairs
+        int incorrect = Math.max(0, totalAttempts - totalCorrect);
+        int stars = starsEarned;
+        int plays = 1;                                  // one Memory Match session
+
+        progressService.recordGameSession(
+                selectedChildId,
+                ModuleIds.MODULE_MEMORY_MATCH,
+                score,
+                timeSpentMs,
+                stars,
+                totalCorrect,
+                incorrect,
+                plays,
+                new DataCallbacks.GenericCallback() {
+                    @Override
+                    public void onSuccess(String r) { }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        Log.w(TAG, "Failed to save memory match metrics", e);
+                    }
+                }
+        );
+    }
+
+
+    private void endAnalyticsSession(boolean completed) {
+        if (analyticsManager == null || analyticsSaved) {
+            return;
+        }
+
+        int totalAttempts = attemptsCount;
+        int totalCorrect = matchesFound;
+        int stars = starsEarned;
+        int completedFlag = completed ? 1 : 0;
+
+        long durationMs = elapsedMs;
+        if (durationMs <= 0L && sessionStartMs > 0L) {
+            durationMs = SystemClock.elapsedRealtime() - sessionStartMs;
+        }
+
+        // Detailed analytics to SQLite
+        analyticsManager.endSession(
+                score,
+                totalCorrect,
+                totalAttempts,
+                stars,
+                completedFlag
+        );
+        analyticsManager = null;
+
+        // Summary to Firestore
+        saveSessionSummaryToFirestore(durationMs, completed);
+
+        analyticsSaved = true;
     }
 
     @Override
@@ -512,6 +592,7 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
         if (bgMusicPlayer != null && bgMusicPlayer.isPlaying()) {
             bgMusicPlayer.pause();
         }
+        endAnalyticsSession(matchesFound == totalPairs);
     }
 
     @Override
@@ -521,7 +602,7 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
             bgMusicPlayer.start();
         }
         if (!timerRunning && matchesFound < totalPairs) {
-            sessionStartMs = System.currentTimeMillis() - elapsedMs;
+            sessionStartMs = SystemClock.elapsedRealtime() - elapsedMs;
             startTimer();
         }
     }
@@ -530,6 +611,7 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
     public void onDestroyView() {
         super.onDestroyView();
         stopTimer();
+        endAnalyticsSession(matchesFound == totalPairs);
 
         if (bgMusicPlayer != null) {
             try {
@@ -543,5 +625,15 @@ public class MemoryMatchFragment extends Fragment implements MemoryMatchAdapter.
             soundPool.release();
             soundPool = null;
         }
+
+        if (tts != null) {
+            try {
+                tts.stop();
+            } catch (Exception ignored) { }
+            tts.shutdown();
+            tts = null;
+        }
     }
+
+    // endregion
 }

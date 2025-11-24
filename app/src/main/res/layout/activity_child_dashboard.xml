@@ -1,34 +1,245 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_soft_gradient"
-    android:fillViewport="true">
+    android:background="@drawable/whimsical_background">
 
+
+<!-- Main content -->
     <LinearLayout
+        android:id="@+id/landingRoot"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Top bar -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="110dp"
+            android:paddingBottom="4dp">
+
+            <!-- Child avatar -->
+            <ImageView
+                android:id="@+id/imgChildAvatar"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_centerVertical="true"
+                android:layout_marginStart="8dp"
+                android:scaleType="centerCrop"
+                android:padding="4dp"
+                android:src="@drawable/ic_child_avatar_placeholder"
+                android:contentDescription="@string/child_avatar" />
+
+            <!-- Greeting -->
+            <LinearLayout
+                android:id="@+id/helloContainer"
+                android:orientation="vertical"
+                android:layout_toEndOf="@id/imgChildAvatar"
+                android:layout_marginStart="16dp"
+                android:layout_centerVertical="true"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/tvHello"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hello,"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/holo_blue_dark" />
+
+                <TextView
+                    android:id="@+id/tvChildName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Buddy"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/holo_blue_dark"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+            </LinearLayout>
+
+        </RelativeLayout>
+
+        <!-- Scroll content -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- SONG MODULES -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:fontFamily="casual"
+                    android:text="Songs"
+                    android:textColor="@android:color/holo_blue_dark"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="337dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btnABCSong"
+                        android:layout_width="105dp"
+                        android:layout_height="140dp"
+                        android:background="@android:color/transparent"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_abc_music" />
+
+                    <ImageButton
+                        android:id="@+id/btn123Song"
+                        android:layout_width="103dp"
+                        android:layout_height="140dp"
+                        android:layout_marginStart="16dp"
+                        android:background="@android:color/transparent"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_numbers" />
+
+                    <ImageButton
+                        android:id="@+id/btnShapesSong"
+                        android:layout_width="91dp"
+                        android:layout_height="140dp"
+                        android:layout_marginStart="16dp"
+                        android:background="@android:color/transparent"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_shapes" />
+                </LinearLayout>
+
+                <!-- GAMES -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:fontFamily="casual"
+                    android:text="Games"
+                    android:textColor="@android:color/holo_blue_dark"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <!-- Row 1 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btnMatchLetter"
+                        android:layout_width="110dp"
+                        android:layout_height="140dp"
+                        android:background="@android:color/transparent"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_match" />
+
+                    <ImageButton
+                        android:id="@+id/btnFeedMonster"
+                        android:layout_width="104dp"
+                        android:layout_height="140dp"
+                        android:layout_marginStart="16dp"
+                        android:background="@android:color/transparent"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_monster" />
+
+                    <ImageButton
+                        android:id="@+id/btnMemoryMatch"
+                        android:layout_width="105dp"
+                        android:layout_height="140dp"
+                        android:layout_marginStart="16dp"
+                        android:background="@android:color/transparent"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_memory" />
+                </LinearLayout>
+
+                <!-- Row 2 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="121dp"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btnWordBuilder"
+                        android:layout_width="140dp"
+                        android:layout_height="140dp"
+                        android:background="@android:color/transparent"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_word_builder" />
+
+                    <ImageButton
+                        android:id="@+id/btnFamilyGallery"
+                        android:layout_width="140dp"
+                        android:layout_height="140dp"
+                        android:layout_marginStart="16dp"
+                        android:background="@android:color/transparent"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_my_family" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </ScrollView>
+
+    </LinearLayout>
+
+    <!-- HOME BUTTON BOTTOM RIGHT -->
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_horizontal"
-        android:padding="24dp">
+        android:layout_gravity="bottom"
+        android:paddingBottom="24dp"
+        android:paddingEnd="24dp">
 
-        <TextView
-            android:id="@+id/txtChildGreeting"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="@color/primary"
-            android:paddingBottom="16dp"/>
+        <ImageButton
+            android:id="@+id/btnChildHome"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@android:color/transparent"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
+            android:padding="0dp"
+            android:src="@drawable/home_icon"
+            app:tint="@null"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:contentDescription="@string/home" />
+    </RelativeLayout>
 
-        <!-- game grid -->
-        <GridLayout
-            android:id="@+id/moduleGrid"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:columnCount="2"
-            android:useDefaultMargins="true"
-            android:alignmentMode="alignMargins"
-            android:gravity="center"/>
-    </LinearLayout>
-</ScrollView>
+    <!-- Bubble overlay on top -->
+    <ImageView
+        android:id="@+id/imgBubblesLanding"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/bubbles_layer"
+        android:alpha="0.35"
+        android:scaleType="centerCrop"
+        android:contentDescription="@null"
+        android:clickable="false"
+        android:focusable="false" />
+
+</FrameLayout>

@@ -1,136 +1,267 @@
 package com.example.brightbuds_app.models;
 
-import com.example.brightbuds_app.utils.EncryptionUtil;
-import java.util.Date;
-import java.util.Map;
+import android.content.Context;
 
 /**
- * ChildProfile:
- * Represents each child account linked to a parent profile.
- * Supports encryption/decryption for sensitive data and includes
- * progress and star calculation for 7-module curriculum.
+ * Represents a child profile that belongs to a parent.
+ * Used both for local SQLite storage and Firestore sync.
  */
 public class ChildProfile {
 
-    private static final int TOTAL_MODULES = 7; // Used for progress and stars calculation
-
+    // Firestore document id. We also use this as the primary key in SQLite.
     private String childId;
-    private String parentId;
-    private String name;
-    private String gender;
-    private String displayName;
-    private int age;
-    private String learningLevel;
-    private boolean active;
-    private int progress;           // Computed progress percentage (0–100)
-    private int stars;              // Computed star rating (0–5)
-    private int completedModules;   // Number of completed modules (0–7)
-    private Date createdAt;
 
-    // Default constructor
+    // Parent Firebase UID.
+    private String parentId;
+
+    // Display name for the child.
+    private String name;
+
+    // Optional: gender for future use.
+    private String gender;
+
+    // Learning level string such as "Beginner", "Intermediate", "Advanced".
+    private String learningLevel;
+
+    private int age;
+
+    // Simple key that maps to a drawable, for example "avatar_1"
+    // or "ic_child_avatar_placeholder".
+    private String avatarKey;
+
+    // Optional: custom words for Word Builder.
+    private String word1;
+    private String word2;
+    private String word3;
+    private String word4;
+
+    // Progress related fields, useful for dashboards and reports.
+    private int stars;
+    private int completedModules;
+    private int progress;
+    private boolean active = true;
+
     public ChildProfile() {
-        this.active = true;
-        this.progress = 0;
-        this.stars = 0;
-        this.completedModules = 0;
-        this.createdAt = new Date();
     }
 
-    // Parameterized constructor
-    public ChildProfile(String parentId, String name, int age, String gender, String learningLevel) {
-        this(); // call default constructor
+    /** Full constructor */
+    public ChildProfile(String childId,
+                        String parentId,
+                        String name,
+                        int age,
+                        String gender,
+                        String learningLevel,
+                        String avatarKey,
+                        String word1,
+                        String word2,
+                        String word3,
+                        String word4) {
+        this.childId = childId;
         this.parentId = parentId;
         this.name = name;
         this.age = age;
         this.gender = gender;
         this.learningLevel = learningLevel;
-        this.displayName = name;
+        this.avatarKey = avatarKey;
+        this.word1 = word1;
+        this.word2 = word2;
+        this.word3 = word3;
+        this.word4 = word4;
     }
 
-    // Encryption helpers
-    public String getEncryptedName() {
-        return EncryptionUtil.encrypt(name != null ? name : "");
+    /** Convenience constructor used by some older screens */
+    public ChildProfile(String parentId,
+                        String name,
+                        int age,
+                        String gender,
+                        String learningLevel) {
+        this.childId = null; // will be assigned later
+        this.parentId = parentId;
+        this.name = name;
+        this.age = age;
+        this.gender = gender;
+        this.learningLevel = learningLevel;
+        this.avatarKey = "ic_child_avatar_placeholder";
     }
 
-    public void setDecryptedName(String encrypted) {
-        name = encrypted != null ? EncryptionUtil.decrypt(encrypted) : "";
+    public String getChildId() {
+        return childId;
     }
 
-    public String getEncryptedGender() {
-        return EncryptionUtil.encrypt(gender != null ? gender : "");
+    public void setChildId(String childId) {
+        this.childId = childId;
     }
 
-    public void setDecryptedGender(String encrypted) {
-        gender = encrypted != null ? EncryptionUtil.decrypt(encrypted) : "";
+    public String getParentId() {
+        return parentId;
     }
 
-    public String getEncryptedDisplayName() {
-        return EncryptionUtil.encrypt(displayName != null ? displayName : "");
+    public void setParentId(String parentId) {
+        this.parentId = parentId;
     }
 
-    public void setDecryptedDisplayName(String encrypted) {
-        displayName = encrypted != null ? EncryptionUtil.decrypt(encrypted) : "";
+    public String getName() {
+        return name;
     }
 
-    // Standard Getters/Setters
-    public String getChildId() { return childId; }
-    public void setChildId(String childId) { this.childId = childId; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public String getParentId() { return parentId; }
-    public void setParentId(String parentId) { this.parentId = parentId; }
+    public String getGender() {
+        return gender;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
 
-    public String getGender() { return gender; }
-    public void setGender(String gender) { this.gender = gender; }
+    public String getLearningLevel() {
+        return learningLevel;
+    }
 
-    public String getDisplayName() { return displayName; }
-    public void setDisplayName(String displayName) { this.displayName = displayName; }
+    public void setLearningLevel(String learningLevel) {
+        this.learningLevel = learningLevel;
+    }
 
-    public int getAge() { return age; }
-    public void setAge(int age) { this.age = age; }
+    // For older code that used getLevel / setLevel
+    public String getLevel() {
+        return learningLevel;
+    }
 
-    public String getLearningLevel() { return learningLevel; }
-    public void setLearningLevel(String learningLevel) { this.learningLevel = learningLevel; }
+    public void setLevel(String level) {
+        this.learningLevel = level;
+    }
 
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
+    public int getAge() {
+        return age;
+    }
 
-    public int getProgress() { return progress; }
-    public void setProgress(int progress) { this.progress = progress; }
+    public void setAge(int age) {
+        this.age = age;
+    }
 
-    public int getStars() { return stars; }
-    public void setStars(int stars) { this.stars = stars; }
+    public String getAvatarKey() {
+        return avatarKey;
+    }
 
-    public int getCompletedModules() { return completedModules; }
+    public void setAvatarKey(String avatarKey) {
+        this.avatarKey = avatarKey;
+    }
+
+    public String getWord1() {
+        return word1;
+    }
+
+    public void setWord1(String word1) {
+        this.word1 = word1;
+    }
+
+    public String getWord2() {
+        return word2;
+    }
+
+    public void setWord2(String word2) {
+        this.word2 = word2;
+    }
+
+    public String getWord3() {
+        return word3;
+    }
+
+    public void setWord3(String word3) {
+        this.word3 = word3;
+    }
+
+    public String getWord4() {
+        return word4;
+    }
+
+    public void setWord4(String word4) {
+        this.word4 = word4;
+    }
+
+    public int getStars() {
+        return stars;
+    }
+
+    public void setStars(int stars) {
+        this.stars = stars;
+    }
+
+    public int getCompletedModules() {
+        return completedModules;
+    }
+
     public void setCompletedModules(int completedModules) {
-        this.completedModules = Math.max(0, Math.min(completedModules, TOTAL_MODULES));
-        recalculateProgressAndStars();
+        this.completedModules = completedModules;
     }
 
-    public Date getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
-
-    public Map<Object, Object> getAvatarUrl() {
-        return java.util.Collections.emptyMap();
+    public int getProgress() {
+        return progress;
     }
 
-    // Derived values
-    private void recalculateProgressAndStars() {
-        this.progress = (int) Math.round((completedModules / (double) TOTAL_MODULES) * 100);
-        this.stars = (int) Math.round((completedModules / (double) TOTAL_MODULES) * 5);
-        if (progress > 100) progress = 100;
-        if (stars > 5) stars = 5;
+    public void setProgress(int progress) {
+        this.progress = progress;
     }
 
-    @Override
-    public String toString() {
-        return "ChildProfile{" +
-                "name='" + displayName + '\'' +
-                ", modules=" + completedModules +
-                ", progress=" + progress +
-                "%, stars=" + stars +
-                '}';
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    /**
+     * Anonymous child code for use in Firestore and reports.
+     * Example: parentUid_child_1 becomes BB1.
+     * If pattern is different, falls back to childId.
+     */
+    public String getChildCode() {
+        String id = this.childId;
+        if (id == null || id.trim().isEmpty()) {
+            return "";
+        }
+
+        // Default pattern created in ChildProfileDAO: parentId_child_1
+        int idx = id.indexOf("_child_");
+        if (idx >= 0) {
+            int start = idx + "_child_".length();
+            if (start < id.length()) {
+                String slot = id.substring(start); // "1", "2", etc
+                return "BB" + slot;
+            }
+        }
+
+        // Fallback to raw id if no pattern match
+        return id;
+    }
+
+    /**
+     * Helper that resolves the correct avatar drawable id.
+     * Falls back to ic_child_avatar_placeholder if avatarKey is missing
+     * or invalid.
+     */
+    public int resolveAvatarResId(Context context) {
+        String key = avatarKey;
+        if (key == null || key.trim().isEmpty()) {
+            key = "ic_child_avatar_placeholder";
+        }
+
+        int resId = context.getResources().getIdentifier(
+                key,
+                "drawable",
+                context.getPackageName()
+        );
+
+        if (resId == 0) {
+            resId = context.getResources().getIdentifier(
+                    "ic_child_avatar_placeholder",
+                    "drawable",
+                    context.getPackageName()
+            );
+        }
+        return resId;
     }
 }

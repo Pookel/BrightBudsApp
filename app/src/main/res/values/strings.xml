@@ -21,6 +21,10 @@
     <string name="locked_icon">Locked</string>
 
 
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+
+
     <!-- Parent Dashboard -->
     <string name="parent_dashboard">Parent Dashboard</string>
     <string name="notifications">Notifications</string>
@@ -30,15 +34,31 @@
     <!--Feed Monster Game -->
     <string name="target_number">Target number</string>
     <string name="monster_image">Monster</string>
-    <string name="home">Home</string>
-    <string name="close">Close</string>
 
-
-
-
+    <string name="avatar">Avatar</string>
 
 
     <!-- Child Profile -->
+    <string name="background">Background</string>
+    <string name="edit_child_profile">Edit Child Profile</string>
+    <string name="choose_avatar">Choose an avatar</string>
+    <string name="child_name">Child name</string>
+    <string name="child_age">Child age</string>
+    <string name="learning_level">Learning level</string>
+    <string name="custom_words_label">Custom words for Word Builder (max 8 letters)</string>
+    <string name="word_1">Word 1</string>
+    <string name="word_2">Word 2</string>
+    <string name="word_3">Word 3</string>
+    <string name="word_4">Word 4</string>
+    <string name="save_child_profile">Save child profile</string>
+    <string name="home">Home</string>
+    <string name="close">Close</string>
+    <string name="child_avatar">Child avatar</string>
+    <string name="gender">Gender</string>
+    <string name="logout">Logout</string>
+    <string name="mute_unmute">Mute or unmute sound</string>
+
+
     <string name="save_child_button_text">Save Child Profile</string>
     <string name="saving_button_text">Saving...</string>
 

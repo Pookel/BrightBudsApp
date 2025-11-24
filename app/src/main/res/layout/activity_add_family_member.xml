@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Root container for the Add Family Member screen.
+    Uses ConstraintLayout so  can pin the background, content and bottom bar.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".activities.AddFamilyMemberActivity">
+
+    <!--
+        Background image for the entire screen.
+        Set to match parent using 0dp width and height with constraints on all sides.
+    -->
+    <ImageView
+        android:id="@+id/bgImage"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:src="@drawable/bluestar_background"
+        android:scaleType="centerCrop"
+        android:contentDescription="@string/app_name"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!--
+        Semi transparent overlay on top of the background.
+        This darkens the background so white text and content are easier to read.
+    -->
+    <View
+        android:id="@+id/dimOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#66000000"
+        app:layout_constraintTop_toTopOf="@id/bgImage"
+        app:layout_constraintBottom_toBottomOf="@id/bgImage"
+        app:layout_constraintStart_toStartOf="@id/bgImage"
+        app:layout_constraintEnd_toEndOf="@id/bgImage" />
+
+    <!--
+        Scrollable content area above the bottom bar.
+        NestedScrollView allows the whole form and list to scroll together.
+    -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:padding="16dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!--
+            Vertical container for the title, photo preview, form fields and list.
+            Gravity center_horizontal keeps everything centered horizontally.
+        -->
+        <LinearLayout
+            android:id="@+id/contentLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <!--
+                Screen title shown at the top of the content.
+                White bold text for visibility on the darkened background.
+            -->
+            <TextView
+                android:id="@+id/txtTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Add Family Picture"
+                android:textColor="@android:color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <!--
+                Counter to show how many family members have already been added.
+                The text can be updated from code to reflect the current count.
+            -->
+            <TextView
+                android:id="@+id/txtCounter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Family members: 0 / 10"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:layout_marginBottom="16dp" />
+
+            <!--
+                Square frame for the family photo preview.
+                Uses a custom background drawable to show a border around the image.
+            -->
+            <FrameLayout
+                android:id="@+id/photoContainer"
+                android:layout_width="160dp"
+                android:layout_height="160dp"
+                android:padding="6dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_avatar_border">
+
+                <!--
+                    The actual image view where the selected family photo is displayed.
+                    Starts with a placeholder avatar and fills the frame with centerCrop.
+                -->
+                <ImageView
+                    android:id="@+id/imgFamilyPhoto"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/ic_child_avatar_placeholder"
+                    android:background="@null"
+                    app:tint="@null"
+                    android:adjustViewBounds="true"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="@string/app_name"
+                    android:clickable="true"
+                    android:focusable="true" />
+            </FrameLayout>
+
+            <!--
+                Camera button to pick or capture an image.
+                Uses a custom button image with no tint or background so it displays as designed.
+            -->
+            <ImageView
+                android:id="@+id/btnPickImage"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:src="@drawable/button_camera"
+                android:background="@null"
+                app:tint="@null"
+                android:padding="0dp"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:layout_marginBottom="16dp"
+                android:contentDescription="@string/app_name"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <!--
+                Text field for the family member's name.
+                White background and black text for a simple, readable input.
+            -->
+            <EditText
+                android:id="@+id/edtName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Name"
+                android:background="@android:color/white"
+                android:padding="12dp"
+                android:textColor="@android:color/black"
+                android:textColorHint="#777777"
+                android:layout_marginBottom="12dp" />
+
+            <!--
+                Text field for the relationship to the child.
+                Example given in the hint to guide the parent.
+            -->
+            <EditText
+                android:id="@+id/edtRelationship"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Relationship (eg. Mom, Aunty, Grandpa)"
+                android:background="@android:color/white"
+                android:padding="12dp"
+                android:textColor="@android:color/black"
+                android:textColorHint="#777777"
+                android:layout_marginBottom="16dp" />
+
+            <!--
+                Button to save the new or edited family member.
+                The text can be changed to "Update" from code when editing.
+            -->
+            <Button
+                android:id="@+id/btnSave"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Save"
+                android:padding="14dp"
+                android:layout_marginBottom="16dp" />
+
+            <!--
+                Label shown above the list of already saved family members.
+            -->
+            <TextView
+                android:id="@+id/txtExistingLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Existing family members"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp" />
+
+            <!--
+                RecyclerView to show the list of existing family members for this child.
+                Nested scrolling disabled because it is inside a NestedScrollView.
+            -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerFamilyMembers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:overScrollMode="never"
+                android:paddingBottom="16dp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!--
+        Bottom bar that holds the Close and Home buttons.
+        Stays fixed at the bottom while the content above can scroll.
+    -->
+    <LinearLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="0dp"
+        android:layout_height="72dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:gravity="center_vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!--
+            Close button on the left to exit this screen.
+            Uses the close_icon drawable as is, no background or tint.
+        -->
+        <ImageView
+            android:id="@+id/btnCloseIcon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@drawable/close_icon"
+            android:background="@null"
+            android:tint="@null"
+            android:padding="0dp"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter" />
+
+        <!--
+            Flexible spacer to push the Home icon to the far right.
+        -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <!--
+            Home button on the right to go back to the main parent or child screen.
+            Uses the home_icon drawable with no tint or background.
+        -->
+        <ImageView
+            android:id="@+id/btnHomeIcon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:src="@drawable/home_icon"
+            android:background="@null"
+            app:tint="@null"
+            android:padding="0dp"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

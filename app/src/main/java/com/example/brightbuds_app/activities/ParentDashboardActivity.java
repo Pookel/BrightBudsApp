@@ -1,453 +1,624 @@
 package com.example.brightbuds_app.activities;
 
-import static com.example.brightbuds_app.R.*;
-
+import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.media.MediaPlayer;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.Uri;
 import android.os.Bundle;
-import android.text.TextUtils;
-import android.util.Log;
-import android.view.MenuItem;
-import android.view.View;
+import android.provider.MediaStore;
+import android.text.InputFilter;
+import android.text.InputType;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.resource.bitmap.CircleCrop;
 import com.example.brightbuds_app.R;
-import com.example.brightbuds_app.interfaces.DataCallbacks;
-import com.example.brightbuds_app.interfaces.ProgressListCallback;
-import com.example.brightbuds_app.models.ChildProfile;
-import com.example.brightbuds_app.models.Progress;
-import com.example.brightbuds_app.services.AuthServices;
-import com.example.brightbuds_app.services.ChildProfileService;
-import com.example.brightbuds_app.services.ProgressService;
-import com.example.brightbuds_app.utils.EncryptionUtil;
-import com.github.mikephil.charting.charts.BarChart;
-import com.github.mikephil.charting.components.XAxis;
-import com.github.mikephil.charting.components.YAxis;
-import com.github.mikephil.charting.data.BarData;
-import com.github.mikephil.charting.data.BarDataSet;
-import com.github.mikephil.charting.data.BarEntry;
-import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
-import com.github.mikephil.charting.formatter.ValueFormatter;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
-import java.util.ArrayList;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
+/*
+ ParentDashboardActivity
+
+ Main hub for parents:
+  - Manage child profiles
+  - View reports and analytics
+  - Give feedback
+  - Manage family photos used in Family Gallery game
+
+ Behaviour:
+  - On open, asks parent to enter their PIN if one is stored in Firestore.
+  - Shows welcome message and parent email.
+  - Parent can change their avatar from gallery or camera.
+  - Shows an offline banner when device is offline.
+  - Close goes to ChildDashboardActivity.
+  - Logout signs out and goes to LandingActivity.
+*/
 public class ParentDashboardActivity extends AppCompatActivity {
 
-    private static final String TAG = "ParentDashboard";
+    // UI references
+    private LinearLayout btnManageProfiles;
+    private LinearLayout btnReports;
+    private LinearLayout btnFeedback;
+    private LinearLayout btnFamilyPhotos;   // btnCamera tile in XML
 
+    private ImageView btnHome;
+    private ImageView btnClose;
+    private ImageView btnMute;
+    private ImageView btnLogout;
+    private ImageView imgParentAvatar;
+
+    private LinearLayout offlineBanner;
+    private TextView txtOfflineMessage;
     private TextView txtWelcome;
-    private LinearLayout childrenContainer;
+    private TextView txtEmail;
 
-    private String parentId;
-    private AuthServices authService;
-    private ChildProfileService childService;
-    private ProgressService progressService;
+    // Media
+    private MediaPlayer bgMusicPlayer;
+    private MediaPlayer cardFlipPlayer;
+
+    // Firebase
+    private FirebaseAuth auth;
     private FirebaseFirestore db;
+    private FirebaseStorage storage;
 
-    private boolean isLoadingChildren = false;
+    // State
+    private boolean pinVerified = false;
+    private boolean isMuted = false;
+
+    // Activity Result for picking image
+    private ActivityResultLauncher<Intent> pickImageLauncher;
+    private ActivityResultLauncher<Intent> captureImageLauncher;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_parent_dashboard);
 
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        auth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
+        storage = FirebaseStorage.getInstance();
+
+        initViews();
+        initImagePickers();
+        initSounds();
+        bindParentInfo();
+        setupClickListeners();
+        updateOfflineBanner();
+        updateMuteIcon();
+
+        // Disable dashboard actions until PIN is verified
+        setDashboardEnabled(false);
+        checkPinBeforeAccess();
+
+        logParentAction("opened_parent_dashboard");
+    }
+
+    private void initViews() {
+        btnManageProfiles = findViewById(R.id.btnManageProfiles);
+        btnReports = findViewById(R.id.btnReports);
+        btnFeedback = findViewById(R.id.btnFeedback);
+        btnFamilyPhotos = findViewById(R.id.btnCamera); // Family Photos tile
+
+        btnHome = findViewById(R.id.btnHome);
+        btnClose = findViewById(R.id.btnClose);
+        btnMute = findViewById(R.id.btnMute);
+        btnLogout = findViewById(R.id.btnLogout);
+        imgParentAvatar = findViewById(R.id.imgParentAvatar);
+
+        offlineBanner = findViewById(R.id.offlineBanner);
+        txtOfflineMessage = findViewById(R.id.txtOfflineMessage);
+        txtWelcome = findViewById(R.id.txtWelcome);
+        txtEmail = findViewById(R.id.txtEmail);
+    }
+
+    private void initImagePickers() {
+        pickImageLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK
+                            && result.getData() != null
+                            && result.getData().getData() != null) {
+
+                        Uri imageUri = result.getData().getData();
+
+                        Glide.with(this)
+                                .load(imageUri)
+                                .circleCrop()
+                                .into(imgParentAvatar);
+
+                        saveAvatarToCloud(imageUri);
+                        logParentAction("updated_avatar_gallery");
+                    }
+                }
+        );
+
+        captureImageLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK
+                            && result.getData() != null
+                            && result.getData().getExtras() != null) {
+
+                        Bitmap photo = (Bitmap) result.getData().getExtras().get("data");
+                        if (photo != null) {
+                            Glide.with(this)
+                                    .load(photo)
+                                    .circleCrop()
+                                    .into(imgParentAvatar);
+
+                            Uri cachedUri = saveBitmapToCache(photo);
+                            if (cachedUri != null) {
+                                saveAvatarToCloud(cachedUri);
+                            }
+                            logParentAction("updated_avatar_camera");
+                        }
+                    }
+                }
+        );
+    }
+
+    private void initSounds() {
+        try {
+            bgMusicPlayer = MediaPlayer.create(this, R.raw.classical_music);
+            if (bgMusicPlayer != null) {
+                bgMusicPlayer.setLooping(true);
+                bgMusicPlayer.setVolume(0.25f, 0.25f);
+            }
+        } catch (Exception ignored) { }
+
+        try {
+            cardFlipPlayer = MediaPlayer.create(this, R.raw.card_flip);
+        } catch (Exception ignored) { }
+    }
+
+    private void playCardFlipSound() {
+        if (isMuted) return;
+        try {
+            if (cardFlipPlayer != null) {
+                cardFlipPlayer.start();
+            }
+        } catch (Exception ignored) { }
+    }
+
+    private void bindParentInfo() {
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser != null) {
+            String email = currentUser.getEmail();
+            String name = currentUser.getDisplayName();
+
+            if (name == null || name.trim().isEmpty()) {
+                name = "Parent";
+            }
+            txtWelcome.setText("Welcome, " + name);
+
+            if (email != null && !email.trim().isEmpty()) {
+                txtEmail.setText(email);
+            } else {
+                txtEmail.setText("Signed in");
+            }
+
+            // Load avatar url from Firestore if available
+            db.collection("parents")
+                    .document(currentUser.getUid())
+                    .get()
+                    .addOnSuccessListener(snapshot -> {
+                        if (snapshot != null && snapshot.exists()) {
+                            String avatarUrl = snapshot.getString("avatarUrl");
+                            if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
+                                Glide.with(this)
+                                        .load(avatarUrl)
+                                        .circleCrop()
+                                        .into(imgParentAvatar);
+                            }
+                        }
+                    });
+
+        } else {
+            txtWelcome.setText("Welcome");
+            txtEmail.setText("Not signed in");
+        }
+    }
+
+    private void updateOfflineBanner() {
+        if (isOnline()) {
+            offlineBanner.setVisibility(android.view.View.GONE);
+        } else {
+            offlineBanner.setVisibility(android.view.View.VISIBLE);
+            txtOfflineMessage.setText("Offline. Some features will sync when back online.");
+        }
+    }
+
+    private boolean isOnline() {
+        ConnectivityManager cm =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm == null) return false;
+        Network network = cm.getActiveNetwork();
+        if (network == null) return false;
+        NetworkCapabilities caps = cm.getNetworkCapabilities(network);
+        return caps != null && (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                || caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
+    }
+
+    private void setDashboardEnabled(boolean enabled) {
+        if (btnManageProfiles != null) btnManageProfiles.setEnabled(enabled);
+        if (btnReports != null) btnReports.setEnabled(enabled);
+        if (btnFeedback != null) btnFeedback.setEnabled(enabled);
+        if (btnFamilyPhotos != null) btnFamilyPhotos.setEnabled(enabled);
+        if (btnHome != null) btnHome.setEnabled(enabled);
+        if (btnClose != null) btnClose.setEnabled(enabled);
+        if (btnMute != null) btnMute.setEnabled(enabled);
+        if (btnLogout != null) btnLogout.setEnabled(enabled);
+        if (imgParentAvatar != null) imgParentAvatar.setEnabled(enabled);
+    }
+
+    private void checkPinBeforeAccess() {
+        FirebaseUser currentUser = auth.getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(this, "Session expired. Please log in again.", Toast.LENGTH_LONG).show();
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
+            goToLoginAndFinish();
             return;
         }
 
-        parentId = currentUser.getUid();
+        String uid = currentUser.getUid();
 
-        authService = new AuthServices(this);
-        childService = new ChildProfileService();
-        progressService = new ProgressService(this);
-        db = FirebaseFirestore.getInstance();
-
-        txtWelcome = findViewById(R.id.txtWelcomeParent);
-        childrenContainer = findViewById(R.id.childrenContainer);
-
-        loadParentNameForWelcome();
-
-        MaterialButton btnManageFamily = findViewById(R.id.btnManageFamily);
-        btnManageFamily.setOnClickListener(v ->
-                startActivity(new Intent(this, FamilyManagementActivity.class)));
-
-        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
-        bottomNav.setOnItemSelectedListener(this::onBottomNavSelected);
-
-        Log.d(TAG, "ParentDashboard loaded for parent: " + parentId);
-    }
-
-    private void loadParentNameForWelcome() {
-        db.collection("users").document(parentId)
+        db.collection("parents")
+                .document(uid)
                 .get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        String encryptedName = documentSnapshot.getString("name");
-                        String encryptedFullName = documentSnapshot.getString("fullName");
-
-                        String decryptedName = EncryptionUtil.decrypt(encryptedName);
-                        String decryptedFullName = EncryptionUtil.decrypt(encryptedFullName);
-
-                        String displayName = !TextUtils.isEmpty(decryptedName) ? decryptedName :
-                                !TextUtils.isEmpty(decryptedFullName) ? decryptedFullName :
-                                        "Parent";
-
-                        txtWelcome.setText("Welcome back " + displayName + "!");
-                        Log.d(TAG, "Parent name decrypted: " + displayName);
-                    } else {
-                        String parentName = FirebaseAuth.getInstance().getCurrentUser().getDisplayName();
-                        txtWelcome.setText("Welcome back " + (parentName != null ? parentName : "Parent") + "!");
-                    }
-                })
+                .addOnSuccessListener(this::handlePinDocument)
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load parent name", e);
-                    String parentName = FirebaseAuth.getInstance().getCurrentUser().getDisplayName();
-                    txtWelcome.setText("Welcome back " + (parentName != null ? parentName : "Parent") + "!");
+                    Toast.makeText(
+                            this,
+                            "Could not verify PIN. Enabling dashboard.",
+                            Toast.LENGTH_LONG
+                    ).show();
+                    pinVerified = true;
+                    setDashboardEnabled(true);
+                    startBackgroundMusic();
                 });
     }
 
-    private boolean onBottomNavSelected(@NonNull MenuItem item) {
-        int id = item.getItemId();
+    private void handlePinDocument(DocumentSnapshot documentSnapshot) {
+        if (documentSnapshot != null && documentSnapshot.exists()) {
+            String storedPin = documentSnapshot.getString("dashboardPin");
 
-        if (id == R.id.nav_home) {
-            Intent intent = new Intent(this, RoleSelectionActivity.class);
+            if (storedPin != null && !storedPin.trim().isEmpty()) {
+                showPinDialog(storedPin.trim());
+            } else {
+                pinVerified = true;
+                setDashboardEnabled(true);
+                startBackgroundMusic();
+            }
+        } else {
+            pinVerified = true;
+            setDashboardEnabled(true);
+            startBackgroundMusic();
+        }
+    }
+
+    private void showPinDialog(String storedPin) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Enter Parent PIN");
+
+        final EditText input = new EditText(this);
+        input.setHint("4 digit PIN");
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(4)});
+        input.setPadding(60, 40, 60, 40);
+        builder.setView(input);
+
+        builder.setCancelable(false);
+
+        builder.setPositiveButton("Confirm", (dialog, which) -> {
+            String enteredPin = input.getText().toString().trim();
+            if (enteredPin.equals(storedPin)) {
+                Toast.makeText(this, "PIN accepted", Toast.LENGTH_SHORT).show();
+                pinVerified = true;
+                setDashboardEnabled(true);
+                startBackgroundMusic();
+                logParentAction("pin_verified");
+            } else {
+                Toast.makeText(this, "Incorrect PIN. Try again.", Toast.LENGTH_SHORT).show();
+                showPinDialog(storedPin);
+            }
+        });
+
+        builder.setNegativeButton("Logout", (dialog, which) -> {
+            auth.signOut();
+            logParentAction("pin_logout");
+            goToLoginAndFinish();
+        });
+
+        builder.show();
+    }
+
+    // Logout and go to LandingActivity
+    private void goToLoginAndFinish() {
+        Intent intent = new Intent(ParentDashboardActivity.this, LandingActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
+    }
+
+    private void setupClickListeners() {
+
+        // Avatar click: choose picture from gallery or camera
+        imgParentAvatar.setOnClickListener(v -> {
+            if (!pinVerified) return;
+
+            String[] options = {"Choose from gallery", "Use camera"};
+            new AlertDialog.Builder(this)
+                    .setTitle("Update parent picture")
+                    .setItems(options, (dialog, which) -> {
+                        if (which == 0) {
+                            Intent pickIntent = new Intent(
+                                    Intent.ACTION_PICK,
+                                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                            );
+                            pickImageLauncher.launch(pickIntent);
+                        } else if (which == 1) {
+                            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                            captureImageLauncher.launch(cameraIntent);
+                        }
+                    })
+                    .show();
+        });
+
+        // Manage Profiles  ManageProfilesActivity
+        btnManageProfiles.setOnClickListener(v -> {
+            if (!pinVerified) return;
+            playCardFlipSound();
+            logParentAction("open_manage_profiles");
+            Intent intent = new Intent(
+                    ParentDashboardActivity.this,
+                    ManageProfilesActivity.class
+            );
+            startActivity(intent);
+        });
+
+        // Reports tile  ReportsDashboardActivity
+        btnReports.setOnClickListener(v -> {
+            if (!pinVerified) return;
+            playCardFlipSound();
+            logParentAction("open_reports_dashboard");
+            Intent intent = new Intent(
+                    ParentDashboardActivity.this,
+                    ReportsDashboardActivity.class
+            );
+            startActivity(intent);
+        });
+
+        // Feedback tile  FeedbackActivity
+        btnFeedback.setOnClickListener(v -> {
+            if (!pinVerified) return;
+            playCardFlipSound();
+            logParentAction("open_feedback");
+            Intent intent = new Intent(
+                    ParentDashboardActivity.this,
+                    FeedbackActivity.class
+            );
+            startActivity(intent);
+        });
+
+        // Family Photos  AddFamilyMemberActivity
+        btnFamilyPhotos.setOnClickListener(v -> {
+            if (!pinVerified) return;
+            playCardFlipSound();
+            logParentAction("open_family_photos");
+            Intent intent = new Intent(
+                    ParentDashboardActivity.this,
+                    AddFamilyMemberActivity.class
+            );
+            startActivity(intent);
+        });
+
+        // Mute button
+        btnMute.setOnClickListener(v -> {
+            if (!pinVerified) return;
+            isMuted = !isMuted;
+            updateMuteIcon();
+            logParentAction(isMuted ? "mute_on" : "mute_off");
+
+            if (bgMusicPlayer != null) {
+                try {
+                    if (isMuted && bgMusicPlayer.isPlaying()) {
+                        bgMusicPlayer.pause();
+                    } else if (!isMuted && !bgMusicPlayer.isPlaying()) {
+                        bgMusicPlayer.start();
+                    }
+                } catch (Exception ignored) { }
+            }
+        });
+
+        // Logout button
+        btnLogout.setOnClickListener(v -> {
+            if (!pinVerified) return;
+            if (!isMuted) {
+                playCardFlipSound();
+            }
+            logParentAction("logout_clicked");
+            auth.signOut();
+            goToLoginAndFinish();
+        });
+
+        // Home  refresh this dashboard
+        btnHome.setOnClickListener(v -> {
+            if (!pinVerified) return;
+            playCardFlipSound();
+            logParentAction("home_clicked");
+            Intent intent = new Intent(
+                    ParentDashboardActivity.this,
+                    ParentDashboardActivity.class
+            );
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(intent);
+        });
+
+        // Close  go back to ChildDashboardActivity
+        btnClose.setOnClickListener(v -> {
+            if (!pinVerified) return;
+            playCardFlipSound();
+            logParentAction("close_clicked");
+
+            Intent intent = new Intent(
+                    ParentDashboardActivity.this,
+                    ChildDashboardActivity.class
+            );
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             startActivity(intent);
             finish();
-            return true;
-        } else if (id == R.id.nav_add_child) {
-            startActivity(new Intent(this, ChildProfileActivity.class));
-            return true;
-        } else if (id == R.id.nav_reports) {
-            SharedPreferences prefs = getSharedPreferences("BrightBudsPrefs", MODE_PRIVATE);
-            String selectedChildId = prefs.getString("selectedChildId", null);
-            Intent i = new Intent(this, ReportGenerationActivity.class);
-            if (selectedChildId != null) i.putExtra("childId", selectedChildId);
-            startActivity(i);
-            return true;
-        } else if (id == R.id.nav_profile) {
-            startActivity(new Intent(this, ParentProfileActivity.class));
-            return true;
-        }
-        return false;
-    }
-
-    private void loadChildrenAndProgress() {
-        if (isLoadingChildren) {
-            Log.d(TAG, "Skipping duplicate loadChildrenAndProgress call");
-            return;
-        }
-        isLoadingChildren = true;
-
-        childrenContainer.removeAllViews();
-
-        View loadingView = getLayoutInflater().inflate(R.layout.item_loading_children, childrenContainer, false);
-        childrenContainer.addView(loadingView);
-
-        Log.d(TAG, "Loading children and progress data");
-
-        childService.getChildrenForCurrentParent(new DataCallbacks.ChildrenListCallback() {
-            @Override
-            public void onSuccess(List<ChildProfile> children) {
-                childrenContainer.removeAllViews();
-
-                Log.d(TAG, "Loaded " + children.size() + " children");
-
-                if (children.isEmpty()) {
-                    View emptyView = getLayoutInflater().inflate(R.layout.item_empty_children, childrenContainer, false);
-                    childrenContainer.addView(emptyView);
-                    loadModuleOverviewChart(new ArrayList<>());
-                    isLoadingChildren = false;
-                    return;
-                }
-
-                List<String> childIds = new ArrayList<>();
-                for (ChildProfile child : children) childIds.add(child.getChildId());
-
-                progressService.getAllProgressForParentWithChildren(parentId, childIds, new ProgressListCallback() {
-                    @Override
-                    public void onSuccess(List<Progress> progressList) {
-                        Log.d(TAG, "Loaded " + progressList.size() + " progress records");
-
-                        for (ChildProfile child : children) {
-                            childrenContainer.addView(createChildCard(child, progressList));
-                        }
-                        loadModuleOverviewChart(progressList);
-                        isLoadingChildren = false;
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        Log.e(TAG, "Failed to load progress", e);
-                        for (ChildProfile child : children) {
-                            childrenContainer.addView(createChildCard(child, new ArrayList<>()));
-                        }
-                        loadModuleOverviewChart(new ArrayList<>());
-                        isLoadingChildren = false;
-                    }
-                });
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                childrenContainer.removeAllViews();
-                Log.e(TAG, "Failed to load children", e);
-
-                View errorView = getLayoutInflater().inflate(R.layout.item_error_children, childrenContainer, false);
-                childrenContainer.addView(errorView);
-                loadModuleOverviewChart(new ArrayList<>());
-                isLoadingChildren = false;
-            }
         });
     }
 
-    private void loadModuleOverviewChart(List<Progress> progressList) {
-        BarChart chart = findViewById(R.id.moduleOverviewChart);
-        if (chart == null) return;
-
-        Map<String, String> moduleTypes = new HashMap<>();
-        moduleTypes.put("module_123_song", "video");
-        moduleTypes.put("module_abc_song", "video");
-        moduleTypes.put("module_feed_the_monster", "game");
-        moduleTypes.put("module_match_the_letter", "game");
-        moduleTypes.put("module_memory_match", "game");
-        moduleTypes.put("module_word_builder", "game");
-        moduleTypes.put("module_my_family", "game");
-        moduleTypes.put("game_shapes_match", "game"); // new module id
-
-        Map<String, Integer> moduleValues = new HashMap<>();
-        for (String module : moduleTypes.keySet()) moduleValues.put(module, 0);
-
-        Log.d(TAG, "Progress list size: " + progressList.size());
-
-        for (Progress progress : progressList) {
-            String moduleId = progress.getModuleId();
-            if (moduleId == null || !moduleTypes.containsKey(moduleId)) continue;
-
-            String type = progress.getType() != null ? progress.getType() : moduleTypes.get(moduleId);
-
-            if ("video".equals(type)) {
-                int plays = progress.getPlays();
-                moduleValues.put(moduleId, moduleValues.get(moduleId) + (plays > 0 ? plays : 1));
-            } else {
-                int score = (int) Math.round(progress.getScore());
-                moduleValues.put(moduleId, Math.max(moduleValues.get(moduleId), score));
+    private void startBackgroundMusic() {
+        if (isMuted) return;
+        try {
+            if (bgMusicPlayer != null && !bgMusicPlayer.isPlaying()) {
+                bgMusicPlayer.start();
             }
-
-            Log.d(TAG, "Module=" + moduleId + " | Type=" + type + " | Plays=" + progress.getPlays() + " | Score=" + progress.getScore());
-        }
-
-        List<BarEntry> entries = new ArrayList<>();
-        List<String> labels = new ArrayList<>();
-        int index = 0;
-
-        String[] order = {
-                "module_123_song",
-                "module_abc_song",
-                "module_feed_the_monster",
-                "module_match_the_letter",
-                "module_memory_match",
-                "module_word_builder",
-                "module_my_family",
-                "game_shapes_match"   // new
-        };
-
-        for (String id : order) {
-            entries.add(new BarEntry(index, moduleValues.get(id)));
-            labels.add(formatModuleLabel(id));
-            index++;
-        }
-
-        BarDataSet dataSet = new BarDataSet(entries, "");
-        int[] colors = new int[entries.size()];
-        for (int i = 0; i < entries.size(); i++) {
-            String id = order[i];
-            colors[i] = "video".equals(moduleTypes.get(id))
-                    ? Color.parseColor("#2196F3")
-                    : Color.parseColor("#4CAF50");
-        }
-        dataSet.setColors(colors);
-        dataSet.setValueTextColor(Color.BLACK);
-        dataSet.setValueTextSize(11f);
-        dataSet.setValueFormatter(new ValueFormatter() {
-            @Override
-            public String getFormattedValue(float value) {
-                return String.valueOf((int) value);
-            }
-        });
-
-        BarData data = new BarData(dataSet);
-        data.setBarWidth(0.7f);
-        chart.setData(data);
-
-        XAxis xAxis = chart.getXAxis();
-        xAxis.setValueFormatter(new IndexAxisValueFormatter(labels));
-        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-        xAxis.setLabelRotationAngle(-45f);
-        xAxis.setGranularity(1f);
-        xAxis.setDrawGridLines(false);
-
-        YAxis left = chart.getAxisLeft();
-        left.setAxisMinimum(0f);
-        left.setGranularity(1f);
-        left.setTextSize(10f);
-
-        chart.getAxisRight().setEnabled(false);
-        chart.getDescription().setEnabled(false);
-        chart.getLegend().setEnabled(false);
-        chart.setExtraOffsets(10f, 10f, 10f, 30f);
-        chart.setFitBars(true);
-        chart.animateY(1000);
-        chart.invalidate();
-
-        Log.d(TAG, "Chart loaded with " + entries.size() + " modules");
+        } catch (Exception ignored) { }
     }
 
-    private String formatModuleLabel(String id) {
-        switch (id) {
-            case "module_123_song": return "123 Song";
-            case "module_abc_song": return "ABC Song";
-            case "module_feed_the_monster": return "Feed Monster";
-            case "module_match_the_letter": return "Match Letter";
-            case "module_memory_match": return "Memory Match";
-            case "module_word_builder": return "Word Builder";
-            case "module_my_family": return "My Family";
-            case "game_shapes_match": return "Shapes Match";
-            default: return id;
+    private void updateMuteIcon() {
+        if (btnMute == null) return;
+        if (isMuted) {
+            btnMute.setColorFilter(Color.RED, PorterDuff.Mode.SRC_ATOP);
+            btnMute.setAlpha(0.8f);
+        } else {
+            btnMute.clearColorFilter();
+            btnMute.setAlpha(1.0f);
         }
     }
 
-    private CardView createChildCard(ChildProfile child, List<Progress> progressList) {
-        CardView card = (CardView) getLayoutInflater().inflate(R.layout.item_child_card_attractive, childrenContainer, false);
-
-        ImageView avatar = card.findViewById(R.id.imgChildAvatar);
-        TextView name = card.findViewById(R.id.txtChildName);
-        TextView age = card.findViewById(R.id.txtChildAge);
-        TextView progressText = card.findViewById(R.id.txtProgress);
-        ProgressBar progressBar = card.findViewById(R.id.progressBar);
-        LinearLayout achievementsLayout = card.findViewById(R.id.layoutAchievements);
-
-        String displayName = child.getDisplayName() != null ? child.getDisplayName() : child.getName();
-        name.setText(displayName);
-        age.setText(child.getAge() + " years old");
-
-        if (child.getAvatarUrl() != null && !child.getAvatarUrl().isEmpty()) {
-            Glide.with(this)
-                    .load(child.getAvatarUrl())
-                    .placeholder(R.drawable.ic_child_avatar_placeholder)
-                    .error(R.drawable.ic_child_avatar_placeholder)
-                    .transform(new CircleCrop())
-                    .into(avatar);
-        } else {
-            avatar.setImageResource(R.drawable.ic_child_avatar_placeholder);
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (bgMusicPlayer != null && bgMusicPlayer.isPlaying()) {
+            try {
+                bgMusicPlayer.pause();
+            } catch (Exception ignored) { }
         }
-
-        int totalModules = 7;
-        int completedModules = 0;
-        int starsEarned = 0;
-
-        if (progressList != null && !progressList.isEmpty()) {
-            for (Progress p : progressList) {
-                if (p == null || p.getModuleId() == null || !p.getChildId().equals(child.getChildId())) continue;
-
-                if ("video".equalsIgnoreCase(p.getType()) && p.getPlays() > 0) {
-                    completedModules++;
-                } else if (p.getScore() > 0) {
-                    completedModules++;
-                }
-
-                if (p.getScore() >= 80) {
-                    starsEarned++;
-                }
-            }
-        }
-
-        int percentage = (int) Math.round((completedModules / (double) totalModules) * 100);
-        percentage = Math.min(percentage, 100);
-
-        int starsEarnedCapped = Math.min(starsEarned, 5);
-
-        if (completedModules == 0) {
-            progressText.setText("New to BrightBuds!");
-            progressText.setTextColor(Color.parseColor("#666666"));
-            progressBar.setVisibility(View.GONE);
-        } else {
-            progressText.setText("Progress: " + percentage + "%");
-            progressBar.setProgress(percentage);
-            progressBar.setVisibility(View.VISIBLE);
-
-            if (percentage >= 80) {
-                progressText.setTextColor(Color.parseColor("#4CAF50"));
-            } else if (percentage >= 50) {
-                progressText.setTextColor(Color.parseColor("#FFC107"));
-            } else {
-                progressText.setTextColor(Color.parseColor("#F44336"));
-            }
-        }
-
-        achievementsLayout.removeAllViews();
-        if (starsEarnedCapped > 0) {
-            for (int i = 0; i < starsEarnedCapped; i++) {
-                ImageView star = new ImageView(this);
-                star.setImageResource(R.drawable.ic_star_yellow);
-                int size = (int) getResources().getDimension(R.dimen.star_icon_size);
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-                params.setMargins(4, 0, 4, 0);
-                star.setLayoutParams(params);
-                achievementsLayout.addView(star);
-            }
-        } else {
-            TextView noStar = new TextView(this);
-            noStar.setText("⭐ 0 Stars");
-            noStar.setTextColor(Color.GRAY);
-            noStar.setTextSize(10);
-            achievementsLayout.addView(noStar);
-        }
-
-        card.setOnClickListener(v -> {
-            SharedPreferences prefs = getSharedPreferences("BrightBudsPrefs", MODE_PRIVATE);
-            prefs.edit()
-                    .putString("selectedChildId", child.getChildId())
-                    .putString("selectedChildName", displayName)
-                    .apply();
-
-            card.animate().scaleX(0.95f).scaleY(0.95f).setDuration(100)
-                    .withEndAction(() -> card.animate().scaleX(1f).scaleY(1f).setDuration(100));
-
-            Toast.makeText(this, "Selected " + displayName + " ✨", Toast.LENGTH_SHORT).show();
-        });
-
-        return card;
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG, "Refreshing dashboard data");
-        progressService.autoSyncOfflineProgress();
-        loadChildrenAndProgress();
+        updateOfflineBanner();
+        if (pinVerified && !isMuted && bgMusicPlayer != null && !bgMusicPlayer.isPlaying()) {
+            try {
+                bgMusicPlayer.start();
+            } catch (Exception ignored) { }
+        }
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (bgMusicPlayer != null) {
+            try {
+                if (bgMusicPlayer.isPlaying()) {
+                    bgMusicPlayer.stop();
+                }
+            } catch (Exception ignored) { }
+            bgMusicPlayer.release();
+            bgMusicPlayer = null;
+        }
+        if (cardFlipPlayer != null) {
+            try {
+                cardFlipPlayer.release();
+            } catch (Exception ignored) { }
+            cardFlipPlayer = null;
+        }
+    }
+
+    // Save an avatar image uri to Firebase Storage and store the download url in Firestore
+    private void saveAvatarToCloud(Uri imageUri) {
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null || imageUri == null) return;
+
+        StorageReference ref = storage.getReference()
+                .child("parent_avatars")
+                .child(user.getUid() + ".jpg");
+
+        ref.putFile(imageUri)
+                .addOnSuccessListener(task -> ref.getDownloadUrl()
+                        .addOnSuccessListener(downloadUri -> {
+                            Map<String, Object> updates = new HashMap<>();
+                            updates.put("avatarUrl", downloadUri.toString());
+                            db.collection("parents")
+                                    .document(user.getUid())
+                                    .set(updates, SetOptions.merge());
+                        }))
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Could not save avatar", Toast.LENGTH_SHORT).show());
+    }
+
+    // Save a bitmap to a cache file and return its uri
+    private Uri saveBitmapToCache(Bitmap bitmap) {
+        try {
+            File file = new File(getCacheDir(),
+                    "parent_avatar_" + System.currentTimeMillis() + ".jpg");
+            FileOutputStream out = new FileOutputStream(file);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
+            out.flush();
+            out.close();
+            return Uri.fromFile(file);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    /*
+     Simple activity logging helper.
+     Writes an entry to Firestore with parent id, action and timestamp.
+    */
+    private void logParentAction(String action) {
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) return;
+
+        Map<String, Object> log = new HashMap<>();
+        log.put("parentId", user.getUid());
+        log.put("action", action);
+        log.put("timestamp", FieldValue.serverTimestamp());
+
+        db.collection("parent_activity_logs").add(log);
+    }
+
+    /*
+     Navigation summary:
+      - Manage Profiles  ManageProfilesActivity
+      - Reports         ReportsDashboardActivity
+      - Feedback        FeedbackActivity
+      - Family Photos   AddFamilyMemberActivity
+      - Home            ParentDashboardActivity (refresh)
+      - Close           ChildDashboardActivity
+      - Logout          LandingActivity
+    */
 }

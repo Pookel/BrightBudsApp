@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:layout_marginBottom="8dp"
+    android:background="@android:color/white">
+
+    <!-- Module title, for example "Feed the Monster" -->
+    <TextView
+        android:id="@+id/txtModuleName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Module name"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black" />
+
+    <!-- Number of sessions played -->
+    <TextView
+        android:id="@+id/txtSessions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sessions: 0"
+        android:textSize="14sp"
+        android:textColor="@android:color/black" />
+
+    <!-- Average score across sessions -->
+    <TextView
+        android:id="@+id/txtAvgScore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Average score: 0"
+        android:textSize="14sp"
+        android:textColor="@android:color/black" />
+
+    <!-- Overall accuracy percentage -->
+    <TextView
+        android:id="@+id/txtAccuracy"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Accuracy: 0 percent"
+        android:textSize="14sp"
+        android:textColor="@android:color/black" />
+
+    <!-- Total time spent on this module in minute:second format -->
+    <TextView
+        android:id="@+id/txtTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Time: 00:00"
+        android:textSize="14sp"
+        android:textColor="@android:color/black" />
+
+    <!-- Best score seen so far -->
+    <TextView
+        android:id="@+id/txtBestScore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Best score: 0"
+        android:textSize="14sp"
+        android:textColor="@android:color/black" />
+
+</LinearLayout>

@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/familyGalleryRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Background -->
+    <ImageView
+        android:id="@+id/bgImageFamily"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/whimsical_background"
+        android:scaleType="centerCrop"
+        android:contentDescription="Background" />
+
+    <LinearLayout
+        android:id="@+id/familyGalleryContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Header with metrics similar to other games -->
+        <LinearLayout
+            android:id="@+id/headerRowFamily"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="5"
+            android:background="#80000000"
+            android:padding="8dp">
+
+            <TextView
+                android:id="@+id/tvFGScore"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Score: 0"
+                android:textColor="#003366"
+                android:textStyle="bold"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvFGCorrect"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Correct: 0"
+                android:textColor="#003366"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvFGAttempts"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Attempts: 0"
+                android:textColor="#003366"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvFGStars"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Stars: 0"
+                android:textColor="#003366"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvFGTimer"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:text="Time: 0s"
+                android:textColor="#003366"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Spacer under header -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="12dp" />
+
+        <!-- Relationship + Name -->
+        <TextView
+            android:id="@+id/tvRelationshipLine"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="This is my Aunt."
+            android:textColor="#003366"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:paddingBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tvNameLine"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="My aunt's name is Holly."
+            android:textColor="#003366"
+            android:textSize="16sp" />
+
+        <!-- Question -->
+        <TextView
+            android:id="@+id/tvQuestion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Who is this?"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#003366"
+            android:paddingTop="12dp" />
+
+        <!-- Main image area with frame and left/right buttons -->
+        <RelativeLayout
+            android:id="@+id/photoBox"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="2"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:background="#40FFFFFF">
+
+            <!-- Left arrow -->
+            <ImageButton
+                android:id="@+id/btnPrevPhoto"
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:background="@android:color/transparent"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:cropToPadding="false"
+                android:src="@drawable/button_back"
+                android:tint="@null"
+                android:contentDescription="Previous photo" />
+
+            <!-- ViewPager for pictures in the centre -->
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/familyViewPager"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_toStartOf="@id/btnNextPhoto"
+                android:layout_toEndOf="@id/btnPrevPhoto"
+                android:layout_centerInParent="true" />
+
+            <!-- Right arrow -->
+            <ImageButton
+                android:id="@+id/btnNextPhoto"
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="@android:color/transparent"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:cropToPadding="false"
+                android:src="@drawable/button_next"
+                android:tint="@null"
+                android:contentDescription="Next photo" />
+        </RelativeLayout>
+
+        <!-- Quiz buttons just above bottom icons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:weightSum="2">
+
+            <TextView
+                android:id="@+id/btnOptionCorrect"
+                android:layout_width="0dp"
+                android:layout_height="65dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:background="@drawable/bg_quiz_option_correct"
+                android:text="My Aunt"
+                android:textColor="#003366"
+                android:textSize="16sp" />
+
+            <View
+                android:layout_width="12dp"
+                android:layout_height="match_parent" />
+
+            <TextView
+                android:id="@+id/btnOptionOther"
+                android:layout_width="0dp"
+                android:layout_height="65dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:background="@drawable/bg_quiz_option_other"
+                android:text="Someone Else"
+                android:textColor="#003366"
+                android:textSize="16sp" />
+        </LinearLayout>
+
+        <!-- Home and Close icons at very bottom, left and right -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
+
+            <ImageButton
+                android:id="@+id/btnHomeIcon"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_alignParentStart="true"
+                android:background="@android:color/transparent"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:cropToPadding="false"
+                android:src="@drawable/home_icon"
+                android:tint="@null"
+                android:contentDescription="Home" />
+
+            <ImageButton
+                android:id="@+id/btnCloseIcon"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_alignParentEnd="true"
+                android:background="@android:color/transparent"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:cropToPadding="false"
+                android:src="@drawable/close_icon"
+                android:tint="@null"
+                android:contentDescription="Close game" />
+        </RelativeLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

@@ -36,6 +36,8 @@ public final class Constants {
     public static final String COLLECTION_GAME_MODULES = "game_modules";
     public static final String COLLECTION_REPORTS = "reports";
     public static final String COLLECTION_SETTINGS = "settings";
+    public static final String COLLECTION_CHILD_PROFILES = "child_profiles";
+
 
     // GAME MODULE IDS (existing)
     public static final String MODULE_ABC_SONG = "module_abc_song";

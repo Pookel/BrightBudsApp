@@ -1,246 +1,237 @@
 package com.example.brightbuds_app.activities;
 
-import android.content.Context;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Intent;
-import android.net.Uri;
+import android.content.SharedPreferences;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.media.SoundPool;
+import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.LayoutInflater;
+import android.speech.tts.TextToSpeech;
+import android.text.TextUtils;
 import android.view.View;
-import android.widget.GridLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.brightbuds_app.R;
-import com.example.brightbuds_app.models.Module;
-import com.example.brightbuds_app.services.ModuleService;
-import com.example.brightbuds_app.services.StorageService;
-import com.google.firebase.auth.FirebaseAuth;
 
-import java.util.List;
+import java.util.Locale;
 
 public class ChildDashboardActivity extends AppCompatActivity {
 
-    private GridLayout moduleGrid;
-    private final ModuleService moduleService = new ModuleService();
-    private String childId;
-    private boolean isParentMode = false;
+    private ImageView imgChildAvatar;
+    private ImageView imgBubbles;
 
-    private static final String TAG = "ChildDashboardActivity";
+    private TextToSpeech textToSpeech;
+    private SoundPool soundPool;
+    private int cardFlipSoundId;
+
+    // Background music for dashboard
+    private MediaPlayer bgMusic;
+
+    private String childId;
+    private String childName;
+    private String childAvatarKey;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_child_dashboard);
 
-        moduleGrid = findViewById(R.id.moduleGrid);
-
-        // 1. Try get childId from Intent
-        childId = getIntent().getStringExtra("childId");
-
-        // 2. If missing, fall back to stored selection
-        if (childId == null || childId.isEmpty()) {
-            var prefs = getSharedPreferences("BrightBudsPrefs", Context.MODE_PRIVATE);
-            childId = prefs.getString("selectedChildId", null);
-        }
-
-        // 3. Only if still missing, show the toast and exit
-        if (childId == null || childId.isEmpty()) {
-            Log.w(TAG, "No childId available for ChildDashboardActivity");
-            Toast.makeText(this,
-                    "Child profile not found. Please reselect a child.",
-                    Toast.LENGTH_LONG).show();
-            finish();
-            return;
-        }
-
-        // Check if parent is logged in (unlocks all modules)
-        isParentMode = FirebaseAuth.getInstance().getCurrentUser() != null;
-        Log.d(TAG, "Parent Mode: " + isParentMode);
-
-        loadModules();
+        readIntentExtras();
+        initViews();
+        setupHeader();
+        setupTts();
+        setupSoundPool();
+        setupBackgroundMusic();
+        setupButtonClicks();
+        setupHomeButton();
+        startBackgroundAnimations();
     }
 
-    /** Load all active modules */
-    private void loadModules() {
-        moduleGrid.removeAllViews();
+    private void readIntentExtras() {
+        Intent intent = getIntent();
+        childId = intent.getStringExtra("child_id");
+        childName = intent.getStringExtra("child_name");
+        childAvatarKey = intent.getStringExtra("child_avatar_key");
+    }
 
-        moduleService.getAllModules(new ModuleService.ModulesCallback() {
-            @Override
-            public void onSuccess(List<Module> modules) {
-                if (modules == null || modules.isEmpty()) {
-                    Log.w(TAG, "No modules returned from service");
-                    Toast.makeText(ChildDashboardActivity.this,
-                            "No modules available yet.", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+    private void initViews() {
+        imgChildAvatar = findViewById(R.id.imgChildAvatar);
+        imgBubbles = findViewById(R.id.imgBubblesLanding);
+    }
 
-                Log.d(TAG, "Modules loaded: " + modules.size());
+    private void setupHeader() {
+        View tvChildNameView = findViewById(R.id.tvChildName);
 
-                for (Module module : modules) {
-                    if (module.isActive()) {
-                        addModuleIcon(module);
-                    } else {
-                        Log.d(TAG, "Skipped inactive module: " + module.getTitle());
-                    }
-                }
+        if (tvChildNameView instanceof android.widget.TextView) {
+            android.widget.TextView tvChildName = (android.widget.TextView) tvChildNameView;
+            if (!TextUtils.isEmpty(childName)) {
+                tvChildName.setText(childName);
             }
+        }
 
-            @Override
-            public void onError(Exception e) {
-                Log.e(TAG, "Failed to load modules", e);
-                Toast.makeText(ChildDashboardActivity.this,
-                        "Failed to load modules: " + e.getMessage(),
-                        Toast.LENGTH_LONG).show();
+        // Resolve avatar using the key passed from ChildSelectionActivity
+        if (!TextUtils.isEmpty(childAvatarKey)) {
+            int resId = getResources().getIdentifier(
+                    childAvatarKey,
+                    "drawable",
+                    getPackageName()
+            );
+            if (resId == 0) {
+                resId = R.drawable.ic_child_avatar_placeholder;
+            }
+            imgChildAvatar.setImageResource(resId);
+        } else {
+            imgChildAvatar.setImageResource(R.drawable.ic_child_avatar_placeholder);
+        }
+    }
+
+    private void setupTts() {
+        textToSpeech = new TextToSpeech(this, status -> {
+            if (status == TextToSpeech.SUCCESS) {
+                textToSpeech.setLanguage(Locale.US);
+                speakGreeting();
             }
         });
     }
 
-    /** Create and add a module tile to the grid */
-    private void addModuleIcon(Module module) {
-        View tile = LayoutInflater.from(this)
-                .inflate(R.layout.item_child_module_icon, moduleGrid, false);
+    private void speakGreeting() {
+        if (textToSpeech == null) return;
 
-        ImageView icon = tile.findViewById(R.id.imgModuleIcon);
-        ImageView lockIcon = tile.findViewById(R.id.imgLockIcon);
-
-        TextView title = tile.findViewById(R.id.txtModuleTitle);
-        if (title != null) {
-            title.setText(module.getTitle() != null ? module.getTitle() : "Untitled Module");
-        }
-
-        // Check if module is locked
-        boolean isLocked = isModuleLocked(module);
-        Log.d(TAG, "Module: " + module.getId() + " Locked: " + isLocked);
-
-        if (isLocked) {
-            icon.setAlpha(0.4f);
-            lockIcon.setVisibility(View.VISIBLE);
-            tile.setEnabled(false);
-        } else {
-            icon.setAlpha(1.0f);
-            lockIcon.setVisibility(View.GONE);
-            tile.setEnabled(true);
-        }
-
-        // Load icon (either from Storage or drawable)
-        if (module.getIcon() != null && module.getIcon().startsWith("modules/")) {
-            StorageService.getInstance().getOrDownloadFile(
-                    this,
-                    module.getIcon(),
-                    uri -> runOnUiThread(() -> icon.setImageURI(uri)),
-                    e -> icon.setImageResource(R.drawable.ic_module_generic)
-            );
-        } else {
-            int resId = getDrawableIdByName(this, module.getIcon());
-            icon.setImageResource(resId != 0 ? resId : R.drawable.ic_module_generic);
-        }
-
-        // Handle clicks
-        if (!isLocked) {
-            tile.setOnClickListener(v -> openModule(module));
-        } else {
-            tile.setOnClickListener(v -> showLockedMessage(module));
-        }
-
-        moduleGrid.addView(tile);
+        String nameForSpeech = TextUtils.isEmpty(childName) ? "friend" : childName;
+        String phrase = "Hello " + nameForSpeech;
+        textToSpeech.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "child_greeting");
     }
 
-    /** Determine locked/unlocked state */
-    private boolean isModuleLocked(Module module) {
-        if (module == null || module.getId() == null) return true;
-
-        // Always unlocked modules
-        if (module.getId().equals("module_abc_song") ||
-                module.getId().equals("module_123_song")) {
-            return false;
+    private void setupSoundPool() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            AudioAttributes attrs = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_GAME)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build();
+            soundPool = new SoundPool.Builder()
+                    .setMaxStreams(4)
+                    .setAudioAttributes(attrs)
+                    .build();
+        } else {
+            soundPool = new SoundPool(4, AudioManager.STREAM_MUSIC, 0);
         }
 
-        // All others locked unless parent is signed in
-        return !isParentMode;
+        cardFlipSoundId = soundPool.load(this, R.raw.card_flip, 1);
     }
 
-    /** Show toast if locked */
-    private void showLockedMessage(Module module) {
-        String title = module.getTitle() != null ? module.getTitle() : "This module";
-        Toast.makeText(this,
-                "🔒 " + title + " is locked. Parent login required to unlock.",
-                Toast.LENGTH_LONG).show();
-    }
-
-    /** Navigate to the correct screen based on module ID */
-    private void openModule(Module module) {
-        Intent intent;
-        String title = module.getTitle() != null ? module.getTitle().toLowerCase() : "";
-        String type = module.getType() != null ? module.getType() : "video";
-        String moduleId = module.getId() != null ? module.getId().toLowerCase() : "";
-
-        switch (moduleId) {
-            case "family_module":
-                intent = new Intent(this, FamilyModuleActivity.class);
-                intent.putExtra("moduleTitle", "My Family");
-                break;
-
-            case "game_feed_monster":
-                intent = new Intent(this, FeedMonsterActivity.class);
-                break;
-
-            case "game_match_letter":
-                intent = new Intent(this, MatchLetterActivity.class);
-                break;
-
-            case "game_memory_match":
-                intent = new Intent(this, MemoryMatchActivity.class);
-                break;
-
-            case "game_word_builder":
-                intent = new Intent(this, WordBuilderActivity.class);
-                break;
-
-            case "module_abc_song":
-            case "module_123_song":
-                intent = new Intent(this, VideoModuleActivity.class);
-                intent.putExtra("storagePath", module.getStoragePath());
-                break;
-
-            default:
-                if (title.contains("family") && !title.contains("words")) {
-                    intent = new Intent(this, FamilyModuleActivity.class);
-                } else if (title.contains("monster")) {
-                    intent = new Intent(this, FeedMonsterActivity.class);
-                } else if (title.contains("match") && title.contains("letter")) {
-                    intent = new Intent(this, MatchLetterActivity.class);
-                } else if (title.contains("memory")
-                        || (title.contains("match") && !title.contains("letter"))) {
-                    intent = new Intent(this, MemoryMatchActivity.class);
-                } else if (title.contains("word") || title.contains("builder")) {
-                    intent = new Intent(this, WordBuilderActivity.class);
-                } else if (type.equalsIgnoreCase("video")
-                        || title.contains("song")
-                        || title.contains("abc")
-                        || title.contains("123")) {
-                    intent = new Intent(this, VideoModuleActivity.class);
-                    intent.putExtra("storagePath", module.getStoragePath());
-                } else {
-                    intent = new Intent(this, ComingSoonActivity.class);
-                    intent.putExtra("message",
-                            module.getTitle() + " is coming soon!");
-                }
-                break;
+    // creative_fun background music
+    private void setupBackgroundMusic() {
+        bgMusic = MediaPlayer.create(this, R.raw.creative_fun);
+        if (bgMusic != null) {
+            bgMusic.setLooping(true);
+            bgMusic.setVolume(0.3f, 0.3f);
+            bgMusic.start();
         }
+    }
 
-        intent.putExtra("childId", childId);
-        intent.putExtra("moduleId", module.getId());
-        intent.putExtra("moduleTitle", module.getTitle());
+    private void playCardFlip() {
+        if (soundPool != null && cardFlipSoundId != 0) {
+            soundPool.play(cardFlipSoundId, 1f, 1f, 1, 0, 1f);
+        }
+    }
+
+    private void setupButtonClicks() {
+        // Songs
+        findViewById(R.id.btnABCSong).setOnClickListener(v ->
+                openModuleWithSound(ABCSongActivity.class));
+
+        findViewById(R.id.btn123Song).setOnClickListener(v ->
+                openModuleWithSound(NumbersSongActivity.class));
+
+        findViewById(R.id.btnShapesSong).setOnClickListener(v ->
+                openModuleWithSound(ShapesSongActivity.class));
+
+        // Games
+        findViewById(R.id.btnMatchLetter).setOnClickListener(v ->
+                openModuleWithSound(MatchLetterActivity.class));
+
+        findViewById(R.id.btnFeedMonster).setOnClickListener(v ->
+                openModuleWithSound(FeedMonsterActivity.class));
+
+        findViewById(R.id.btnMemoryMatch).setOnClickListener(v ->
+                openModuleWithSound(MemoryMatchActivity.class));
+
+        findViewById(R.id.btnWordBuilder).setOnClickListener(v ->
+                openModuleWithSound(WordBuilderActivity.class));
+
+        findViewById(R.id.btnFamilyGallery).setOnClickListener(v ->
+                openModuleWithSound(FamilyGalleryActivity.class));
+    }
+
+    private void openModuleWithSound(Class<?> activityClass) {
+        playCardFlip();
+        Intent intent = new Intent(ChildDashboardActivity.this, activityClass);
+        intent.putExtra("child_id", childId);
+        intent.putExtra("child_name", childName);
+        intent.putExtra("child_avatar_key", childAvatarKey);
         startActivity(intent);
     }
 
-    /** Get drawable resource by name safely */
-    private static int getDrawableIdByName(Context ctx, String name) {
-        if (name == null || name.isEmpty()) return 0;
-        return ctx.getResources().getIdentifier(name, "drawable", ctx.getPackageName());
+    // Home icon bottom right - back to ChildSelectionActivity
+    private void setupHomeButton() {
+        ImageButton btnHome = findViewById(R.id.btnChildHome);
+        if (btnHome != null) {
+            btnHome.setOnClickListener(v -> {
+                Intent intent = new Intent(ChildDashboardActivity.this, ChildSelectionActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
+                finish();
+            });
+        }
+    }
+
+    private void startBackgroundAnimations() {
+        if (imgBubbles != null) {
+            ObjectAnimator floatAnim = ObjectAnimator.ofFloat(
+                    imgBubbles,
+                    "translationY",
+                    30f,
+                    -30f
+            );
+            floatAnim.setDuration(9000);
+            floatAnim.setRepeatCount(ValueAnimator.INFINITE);
+            floatAnim.setRepeatMode(ValueAnimator.REVERSE);
+            floatAnim.start();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+        }
+
+        if (soundPool != null) {
+            soundPool.release();
+            soundPool = null;
+        }
+
+        if (bgMusic != null) {
+            try {
+                if (bgMusic.isPlaying()) {
+                    bgMusic.stop();
+                }
+            } catch (Exception ignored) {
+            }
+            bgMusic.release();
+            bgMusic = null;
+        }
     }
 }

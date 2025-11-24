@@ -4,10 +4,11 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.brightbuds_app.R;
 
-/*
- Hosts the FeedTheMonsterFragment inside a FragmentContainerView.
- Activity contains no game logic to keep responsibilities separate.
-*/
+/**
+ * Hosts the FeedTheMonsterFragment inside a FragmentContainerView.
+ * This activity only sets up the container and title.
+ * All game behaviour lives inside the Fragment.
+ */
 public class FeedMonsterActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {

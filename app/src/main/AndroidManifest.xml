@@ -21,9 +21,9 @@
             android:supportsRtl="true"
             android:theme="@style/Theme.BrightBudsApp">
 
-                <!-- Splash Screen (Launcher) -->
+                <!-- Launcher splash screen -->
                 <activity
-                    android:name=".activities.SplashActivity"
+                    android:name=".activities.LauncherActivity"
                     android:exported="true"
                     android:theme="@style/Theme.BrightBudsApp">
                         <intent-filter>
@@ -32,26 +32,15 @@
                         </intent-filter>
                 </activity>
 
-                <!-- Landing Page -->
+                <!-- Landing Page  -->
                 <activity
                     android:name=".activities.LandingActivity"
-                    android:label="BrightBuds"
                     android:exported="false"
                     android:theme="@style/Theme.BrightBudsApp" />
 
-                <!-- Role Selection -->
-                <activity
-                    android:name=".activities.RoleSelectionActivity"
-                    android:label="Choose Profile"
-                    android:exported="false"
-                    android:theme="@style/Theme.BrightBudsApp" />
 
                 <!-- Authentication -->
-                <activity
-                    android:name=".activities.LoginActivity"
-                    android:label="Login"
-                    android:exported="false"
-                    android:theme="@style/Theme.BrightBudsApp" />
+
                 <activity
                     android:name=".activities.RegisterActivity"
                     android:label="Register"
@@ -70,24 +59,17 @@
 
                 <!-- Child Management -->
                 <activity android:name=".activities.ChildSelectionActivity" />
-                <activity android:name=".activities.ChildProfileActivity" />
-                <activity android:name=".activities.AddChildActivity" />
 
-                <!-- Family Module -->
-                <activity
-                    android:name=".activities.FamilyManagementActivity"
-                    android:label="Manage Family"
-                    android:parentActivityName=".activities.ParentDashboardActivity" />
-                <activity
-                    android:name=".activities.FamilyModuleActivity"
-                    android:label="Family Album"
-                    android:parentActivityName=".activities.ParentDashboardActivity" />
 
-                <!-- Parent Profile -->
+
+
+                <!-- Login Screen -->
                 <activity
-                    android:name=".activities.ParentProfileActivity"
-                    android:label="My Profile"
-                    android:parentActivityName=".activities.ParentDashboardActivity" />
+                    android:name=".activities.LoginActivity"
+                    android:label="Login"
+                    android:exported="false"
+                    android:theme="@style/Theme.BrightBudsApp" />
+
 
                 <!-- Terms and Conditions -->
                 <activity
@@ -95,17 +77,26 @@
                     android:label="Terms and Conditions"
                     android:exported="false"
                     android:theme="@style/Theme.BrightBudsApp"
-                    android:parentActivityName=".activities.ParentProfileActivity" />
+                    android:parentActivityName=".activities.RegisterActivity" />
 
                 <!-- Learning and Utility Modules -->
-                <activity android:name=".activities.VideoModuleActivity" />
-                <activity android:name=".activities.ReportGenerationActivity" />
+
+
                 <activity android:name=".activities.GameModulesActivity" />
                 <activity android:name=".activities.ComingSoonActivity" />
                 <activity android:name=".activities.FeedMonsterActivity" />
                 <activity android:name=".activities.MemoryMatchActivity" />
                 <activity android:name=".activities.WordBuilderActivity" />
-                <activity android:name=".activities.ShapesMatchActivity"
+
+                <!-- Song activities (local video) -->
+                <activity
+                    android:name=".activities.ABCSongActivity"
+                    android:exported="false" />
+                <activity
+                    android:name=".activities.NumbersSongActivity"
+                    android:exported="false" />
+                <activity
+                    android:name=".activities.ShapesSongActivity"
                     android:exported="false" />
 
                 <!-- Match the Letter -->
@@ -114,11 +105,58 @@
                     android:exported="false"
                     android:theme="@style/Theme.BrightBudsApp" />
 
-                <!-- Congratulations screen -->
                 <activity
-                    android:name=".activities.CongratulationsActivity"
+                    android:name=".activities.FamilyGalleryActivity"
                     android:exported="false"
                     android:theme="@style/Theme.BrightBudsApp" />
+
+                <activity
+                    android:name=".activities.FeedbackActivity"
+                    android:label="Feedback"
+                    android:exported="false"
+                    android:theme="@style/Theme.BrightBudsApp" />
+
+                <activity
+                    android:name=".activities.ManageProfilesActivity"
+                    android:exported="false"
+                    android:theme="@style/Theme.BrightBudsApp" />
+
+                <activity
+                    android:name=".activities.AddFamilyMemberActivity"
+                    android:exported="false" />
+
+                <activity
+                    android:name=".activities.ChartsAndInsightsActivity"
+                    android:exported="false" />
+
+                <activity android:name=".activities.AllChildrenChartsPdfActivity" />
+
+                <activity
+                    android:name=".activities.ChildReportActivity"
+                    android:exported="false" />
+                <activity android:name=".activities.AllChildrenReportActivity" />
+
+                <!-- Reports dashboard screen -->
+                <activity
+                    android:name=".activities.ReportsDashboardActivity"
+                    android:exported="false"
+                    android:theme="@style/Theme.BrightBudsApp" />
+
+                <activity
+                    android:name=".activities.EditChildActivity"
+                    android:exported="false" />
+
+
+                <provider
+                    android:name="androidx.core.content.FileProvider"
+                    android:authorities="${applicationId}.fileprovider"
+                    android:exported="false"
+                    android:grantUriPermissions="true">
+                        <meta-data
+                            android:name="android.support.FILE_PROVIDER_PATHS"
+                            android:resource="@xml/file_paths" />
+                </provider>
+
 
         </application>
 

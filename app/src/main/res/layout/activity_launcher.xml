@@ -1,26 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/launcherRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:background="@drawable/bg_gradient_main"
-    android:padding="24dp">
+    android:background="@drawable/bluestar_background">
 
+    <!-- Floating bubbles layer (semi transparent, over background) -->
     <ImageView
-        android:id="@+id/imgLogo"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:layout_marginBottom="24dp"
-        android:src="@drawable/ic_brightbuds_logo"
+        android:id="@+id/imgBubbles"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@drawable/bubbles_layer"
+        android:alpha="0.35"
+        android:scaleType="centerCrop"
         android:contentDescription="@string/app_logo" />
 
-    <TextView
-        android:id="@+id/txtLoading"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Loading BrightBuds..."
-        android:textColor="@color/textPrimary"
-        android:textSize="16sp"
-        android:layout_marginTop="12dp" />
-</LinearLayout>
+    <!-- Main content: logo and text, centered -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <ImageView
+            android:id="@+id/imgLogo"
+            android:layout_width="360dp"
+            android:layout_height="360dp"
+            android:layout_marginBottom="16dp"
+            android:src="@drawable/ic_brightbuds_logo"
+            android:contentDescription="@string/app_logo" />
+
+        <!-- Tagline -->
+        <TextView
+            android:id="@+id/txtTagline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Big learning for Little minds"
+            android:textColor="#0D47A1"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="16dp"
+            android:fontFamily="casual" />
+
+        <TextView
+            android:id="@+id/txtLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Loading BrightBuds..."
+            android:textColor="@color/textPrimary"
+            android:textSize="16sp"
+            android:layout_marginTop="8dp" />
+
+    </LinearLayout>
+
+</FrameLayout>

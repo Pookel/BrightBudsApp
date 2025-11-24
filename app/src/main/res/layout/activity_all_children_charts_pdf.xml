@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layoutAllChildrenChartsPdf"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bluestar_background"
+    android:padding="16dp"
+    tools:context=".activities.AllChildrenChartsPdfActivity">
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/tvPdfTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="BrightBuds PDF Reports"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/holo_blue_dark"
+        android:padding="4dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Status / instructions -->
+    <TextView
+        android:id="@+id/tvPdfStatus"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Loading charts and metrics..."
+        android:textSize="14sp"
+        android:textColor="@android:color/holo_blue_dark"
+        android:gravity="center"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        app:layout_constraintTop_toBottomOf="@id/tvPdfTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Icon row -->
+    <LinearLayout
+        android:id="@+id/layoutIconRow"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:layout_marginTop="30dp"
+        app:layout_constraintTop_toBottomOf="@id/tvPdfStatus"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Download PDF -->
+        <LinearLayout
+            android:id="@+id/layoutDownloadPdf"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <ImageView
+                android:id="@+id/iconDownloadPdf"
+                android:layout_width="110dp"
+                android:layout_height="110dp"
+                android:adjustViewBounds="true"
+                android:src="@drawable/pdf_icon"
+                android:tint="@null" />
+
+            <TextView
+                android:id="@+id/tvDownloadPdf"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Download PDF"
+                android:textColor="@android:color/holo_blue_dark"
+                android:textSize="15sp"
+                android:layout_marginTop="6dp"/>
+        </LinearLayout>
+
+        <!-- Space between icons -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="0dp"/>
+
+        <!-- Email PDF -->
+        <LinearLayout
+            android:id="@+id/layoutEmailPdf"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <ImageView
+                android:id="@+id/iconEmailPdf"
+                android:layout_width="110dp"
+                android:layout_height="110dp"
+                android:adjustViewBounds="true"
+                android:src="@drawable/email_pdf"
+                android:tint="@null" />
+
+            <TextView
+                android:id="@+id/tvEmailPdf"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Email PDF"
+                android:textColor="@android:color/holo_blue_dark"
+                android:textSize="15sp"
+                android:layout_marginTop="6dp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Footer with close (left) and home (right) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/footerRow"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Close pinned left -->
+        <ImageButton
+            android:id="@+id/btnCloseChartsPdf"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginStart="8dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/close"
+            android:padding="0dp"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
+            android:cropToPadding="false"
+            android:src="@drawable/close_icon"
+            android:tint="@null"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <!-- Home pinned right -->
+        <ImageButton
+            android:id="@+id/btnHomeChartsPdf"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginEnd="8dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/home"
+            android:padding="0dp"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
+            android:cropToPadding="false"
+            android:src="@drawable/home_icon"
+            android:tint="@null"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

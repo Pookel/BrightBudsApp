@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bluestar_background"
+    tools:context=".activities.ChartsAndInsightsActivity">
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/tvChartsTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Charts and Insights"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/holo_blue_dark"
+        android:padding="6dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Scrollable content for all charts -->
+    <ScrollView
+        android:id="@+id/scrollCharts"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:padding="12dp"
+        app:layout_constraintTop_toBottomOf="@id/tvChartsTitle"
+        app:layout_constraintBottom_toTopOf="@id/footerBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:id="@+id/layoutChartsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <!-- Stars per child section -->
+            <TextView
+                android:id="@+id/tvStarsHeading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Stars per child"
+                android:textColor="@android:color/holo_blue_dark"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <com.github.mikephil.charting.charts.BarChart
+                android:id="@+id/chartStarsPerChild"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:background="#80000000" />
+
+            <TextView
+                android:id="@+id/tvStarsExplanation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="This chart shows the total stars earned by each completed child profile. Blank or default profiles are not included."
+                android:textColor="@android:color/holo_blue_dark"
+                android:textSize="12sp"
+                android:paddingTop="4dp"
+                android:paddingBottom="12dp" />
+
+            <!-- Progress per child section -->
+            <TextView
+                android:id="@+id/tvProgressHeading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Overall progress per child"
+                android:textColor="@android:color/holo_blue_dark"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp" />
+
+            <com.github.mikephil.charting.charts.BarChart
+                android:id="@+id/chartProgressPerChild"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:background="#80000000" />
+
+            <TextView
+                android:id="@+id/tvProgressExplanation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="This chart uses the average score across all modules to show overall learning progress for each child."
+                android:textColor="@android:color/holo_blue_dark"
+                android:textSize="12sp"
+                android:paddingTop="4dp"
+                android:paddingBottom="12dp" />
+
+            <!-- Most-played module per child -->
+            <TextView
+                android:id="@+id/tvMostPlayedHeading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Most played module per child"
+                android:textColor="@android:color/holo_blue_dark"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp" />
+
+            <com.github.mikephil.charting.charts.BarChart
+                android:id="@+id/chartMostPlayedPerChild"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:background="#80000000" />
+
+            <TextView
+                android:id="@+id/tvMostPlayedExplanation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="This chart shows each child’s favourite activity based on which module they played the most. The bar label shows module name and play count."
+                android:textColor="@android:color/holo_blue_dark"
+                android:textSize="12sp"
+                android:paddingTop="4dp"
+                android:paddingBottom="12dp" />
+
+            <!-- Radar chart for analytics -->
+            <TextView
+                android:id="@+id/tvRadarHeading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Analytics comparison per child"
+                android:textColor="@android:color/holo_blue_dark"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp" />
+
+            <com.github.mikephil.charting.charts.RadarChart
+                android:id="@+id/chartRadarPerChild"
+                android:layout_width="match_parent"
+                android:layout_height="260dp"
+                android:background="#80000000" />
+
+            <TextView
+                android:id="@+id/tvRadarExplanation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="The radar chart compares each child’s average score, accuracy, and average time taken. Bigger shapes show stronger performance across these three measures."
+                android:textColor="@android:color/holo_blue_dark"
+                android:textSize="12sp"
+                android:paddingTop="4dp"
+                android:paddingBottom="16dp" />
+
+            <!-- Placeholder text when there is no data -->
+            <TextView
+                android:id="@+id/tvChartsPlaceholder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:gravity="center_horizontal"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Footer with Close (left) and Home (right) -->
+    <LinearLayout
+        android:id="@+id/footerBar"
+        android:layout_width="0dp"
+        android:layout_height="72dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/btnCloseCharts"
+            android:layout_width="65dp"
+            android:layout_height="65dp"
+            android:src="@drawable/close_icon"
+            android:background="@android:color/transparent"
+            android:tint="@null" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageView
+            android:id="@+id/btnHomeCharts"
+            android:layout_width="65dp"
+            android:layout_height="65dp"
+            android:src="@drawable/home_icon"
+            android:background="@android:color/transparent"
+            android:tint="@null" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
