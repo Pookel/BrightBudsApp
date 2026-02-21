@@ -1,10 +1,195 @@
-# BrightBuds Android
+BrightBuds – Android Educational Application
 
-Android learning app for early learners.
-Built with Android Studio, Java, and Firebase (Auth, Firestore, Storage).
+BrightBuds is a modular Android-based educational application designed for early childhood learning (ages 2–6). The application combines interactive game modules, audio-assisted learning, and structured performance analytics to support foundational literacy and numeracy development.
 
-## Setup
-1. Clone with SSH
-2. Open in Android Studio
-3. Add `google-services.json` inside the `app/` folder
-4. Sync Gradle and Run
+The system is designed with an offline-first architecture, making it suitable for low-connectivity environments and accessible to users in under-resourced communities.
+
+🚀 Key Features
+🎮 Interactive Learning Modules
+
+Word Builder (spelling and phonics)
+
+Feed the Monster (counting and number recognition)
+
+Match the Letter (alphabet recognition)
+
+Memory Match (recall and concentration)
+
+Family Module (name recognition and familiarity learning)
+
+🎵 Passive Learning Modules
+
+ABC Song (alphabet sequence recognition)
+
+123 Song (number recognition)
+
+Shapes Song (basic shape identification)
+
+🔊 Audio-Assisted Learning
+
+Integrated Text-to-Speech (TTS) for interactive guidance
+
+Reinforces pronunciation of letters, numbers, and words
+
+Provides real-time audio feedback during user interaction
+
+📊 Performance Tracking & Analytics
+
+BrightBuds captures structured user interaction data to monitor learning progress and engagement.
+
+Tracked metrics include:
+
+Score and star ratings
+
+Accuracy (correct vs incorrect actions)
+
+Attempts per activity
+
+Time spent per module
+
+Completion rates
+
+The system differentiates between:
+
+Active modules (games) → interaction-driven data
+
+Passive modules (songs) → engagement-based data
+
+This structured data enables performance analysis and supports future predictive analytics.
+
+📈 Reporting System
+
+The application includes a built-in reporting feature that generates PDF-based performance summaries.
+
+Reports include:
+
+Child profile information
+
+Total plays and engagement metrics
+
+Time spent learning
+
+Module-level performance breakdown
+
+Graphs and visual analytics
+
+Reports are generated locally using Android’s PdfDocument API and can be:
+
+Viewed on device
+
+Saved
+
+Shared via email or messaging platforms
+
+👤 User Profile System
+
+Child profile dashboard for personalised tracking
+
+User-specific analytics and performance segmentation
+
+Parent-linked profiles for secure data access
+
+🛠️ System Architecture
+
+Offline-first design using SQLite for local storage
+
+Firebase Firestore for optional cloud sync
+
+Efficient data handling with indexed queries (childId, moduleId)
+
+Optimised UI components (RecyclerView, Glide) for performance
+
+🔐 Security Features
+
+Local storage of sensitive data (child details in SQLite)
+
+Firebase security rules restricting access by parentId
+
+No unauthorised access to user data
+
+Controlled access for admin and parent roles
+
+⚙️ Tech Stack
+
+Java (Android Development)
+
+SQLite (Local Database)
+
+Firebase Firestore (Cloud Sync)
+
+Firebase Authentication
+
+MPAndroidChart (Data Visualisation)
+
+Text-to-Speech API
+
+🧠 Data & ML Readiness
+
+The system is designed with a strong data foundation to support future machine learning capabilities, including:
+
+Feature-like metrics (score, attempts, time spent)
+
+User behaviour tracking
+
+Engagement pattern analysis
+
+Basis for adaptive learning systems
+
+📱 Installation
+Requirements
+
+Android 8.0 (Oreo) or higher
+
+Minimum 2GB RAM
+
+~150MB storage
+
+Installation Options
+
+Install via APK (end users)
+
+Run via Android Studio (developers/testers)
+
+
+## 📸 Screenshots
+
+### Child Profile Dashboard
+![Child Dashboard](child_dashboard.png)
+
+### Word Builder Module
+![Word Builder](word_builder_game.png)
+
+### Feed the Monster Module
+![Feed the Monster](feed_monster_game.png)
+
+### Analytics Dashboard
+![Analytics](analytics_dashboard.png)
+
+📌 Project Status
+
+Completed:
+
+Core learning modules
+
+Analytics tracking system
+
+Reporting functionality
+
+Offline-first architecture
+
+Planned Enhancements:
+
+Adaptive learning engine
+
+Multi-language support (South African languages)
+
+AI-based speech recognition
+
+Expanded learning modules
+
+👩‍💻 Author
+
+Melecia Raman
+
+
+
