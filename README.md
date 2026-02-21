@@ -150,21 +150,29 @@ Install via APK (end users)
 
 Run via Android Studio (developers/testers)
 
-
-
 ## 📱 Application Screenshots
 
 ### 👶 Child Dashboard
-![Child Dashboard](https://github.com/Pookel/BrightBudsApp/blob/main/child_dashboard.png?raw=true)
+<img src="https://raw.githubusercontent.com/Pookel/BrightBudsApp/main/child_dashboard.png" width="300" />
 
 ### 📊 Analytics Dashboard
-![Analytics Dashboard](https://github.com/Pookel/BrightBudsApp/blob/main/analytics_dashboard.png?raw=true)
+<img src="https://raw.githubusercontent.com/Pookel/BrightBudsApp/main/analytics_dashboard.png" width="300" />
 
 ### 🔤 Word Builder Game
-![Word Builder Game](https://github.com/Pookel/BrightBudsApp/blob/main/word_builder_game.png?raw=true)
+<img src="https://raw.githubusercontent.com/Pookel/BrightBudsApp/main/word_builder_game.png" width="300" />
 
 ### 🍪 Feed the Monster Game
-![Feed the Monster Game](https://github.com/Pookel/BrightBudsApp/blob/main/feed_monster_game.png?raw=true)
+<img src="https://raw.githubusercontent.com/Pookel/BrightBudsApp/main/feed_monster_game.png" width="300" />
+
+## 📌 Project Status
+Completed:
+- Core learning modules
+- Analytics tracking system
+- Reporting functionality
+- Offline-first architecture
+
+
+
 📌 Project Status
 
 Completed:
